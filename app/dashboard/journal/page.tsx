@@ -1,160 +1,190 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { Plus, Search, Moon, Calendar } from 'lucide-react'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { format } from 'date-fns'
+import { ArrowLeft, Save, Moon, Sparkles } from 'lucide-react'
 import { getMoonPhase } from '@/lib/utils/moon-phase'
 
-interface JournalEntry {
-  id: string
-  title: string | null
-  content: string
-  mood: string | null
-  moon_phase: string | null
-  created_at: string
-}
+const MOODS = [
+  'Peaceful', 'Anxious', 'Grateful', 'Empowered', 
+  'Confused', 'Inspired', 'Reflective', 'Energized'
+]
 
-export default function JournalPage() {
-  const [entries, setEntries] = useState<JournalEntry[]>([])
-  const [searchTerm, setSearchTerm] = useState('')
-  const [loading, setLoading] = useState(true)
+export default function NewJournalPage() {
+  const [title, setTitle] = useState('')
+  const [content, setContent] = useState('')
+  const [mood, setMood] = useState('')
+  const [saving, setSaving] = useState(false)
+  const router = useRouter()
   const supabase = createClient()
 
-  useEffect(() => {
-    fetchEntries()
-  }, [])
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!content.trim()) return
 
-  const fetchEntries = async () => {
+    setSaving(true)
+
     try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error('Not authenticated')
+
+      const moonPhase = getMoonPhase(new Date())
+
       const { data, error } = await supabase
         .from('journal_entries')
-        .select('*')
-        .order('created_at', { ascending: false })
+        .insert({
+          user_id: user.id,
+          title: title.trim() || null,
+          content: content.trim(),
+          mood: mood || null,
+          moon_phase: moonPhase.replace(/[🌑🌒🌓🌔🌕🌖🌗🌘]/g, '').trim(),
+        })
+        .select()
+        .single()
 
       if (error) throw error
-      setEntries(data || [])
+
+      // Automatically navigate to the entry page and request Beatrice's reflection
+      if (data) {
+        router.push(`/dashboard/journal/${data.id}?requestReflection=true`)
+      } else {
+        router.push('/dashboard/journal')
+      }
     } catch (error) {
-      console.error('Error fetching entries:', error)
+      console.error('Error saving entry:', error)
+      alert('Failed to save entry. Please try again.')
     } finally {
-      setLoading(false)
+      setSaving(false)
     }
   }
 
-  const filteredEntries = entries.filter(entry => {
-    const searchLower = searchTerm.toLowerCase()
-    return (
-      entry.title?.toLowerCase().includes(searchLower) ||
-      entry.content.toLowerCase().includes(searchLower) ||
-      entry.mood?.toLowerCase().includes(searchLower)
-    )
-  })
-
-  const deleteEntry = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this entry?')) return
-
-    try {
-      const { error } = await supabase
-        .from('journal_entries')
-        .delete()
-        .eq('id', id)
-
-      if (error) throw error
-      
-      setEntries(entries.filter(e => e.id !== id))
-    } catch (error) {
-      console.error('Error deleting entry:', error)
-      alert('Failed to delete entry')
-    }
-  }
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-purple-400">Loading your sacred writings...</div>
-      </div>
-    )
-  }
+  const currentMoonPhase = getMoonPhase(new Date())
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-gradient">Sacred Journal</h1>
-          <p className="text-gray-400 mt-1">Your spiritual reflections and insights</p>
-        </div>
-        <Link href="/dashboard/journal/new" className="btn-mystical">
-          <Plus className="w-5 h-5 mr-2" />
-          New Entry
+    <div className="max-w-4xl mx-auto">
+      <div className="mb-6">
+        <Link 
+          href="/dashboard/journal" 
+          className="inline-flex items-center text-purple-400 hover:text-purple-300 mb-4"
+        >
+          <ArrowLeft className="w-4 h-4 mr-2" />
+          Back to Journal
         </Link>
-      </div>
 
-      {/* Search */}
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-        <input
-          type="text"
-          placeholder="Search your entries..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="input-mystical w-full pl-10"
-        />
-      </div>
-
-      {/* Entries Grid */}
-      {filteredEntries.length === 0 ? (
-        <div className="card-mystical text-center py-12">
-          <Moon className="w-12 h-12 text-purple-400 mx-auto mb-4" />
-          <p className="text-gray-400 mb-4">
-            {searchTerm 
-              ? 'No entries found matching your search.' 
-              : 'Your journal awaits its first entry.'}
-          </p>
-          {!searchTerm && (
-            <Link href="/dashboard/journal/new" className="text-purple-400 hover:text-purple-300">
-              Create your first entry →
-            </Link>
-          )}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-gradient">New Entry</h1>
+            <p className="text-sm text-gray-400 mt-1">
+              {new Date().toLocaleDateString('en-US', { 
+                weekday: 'long', 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric' 
+              })}
+            </p>
+          </div>
+          <div className="text-right">
+            <div className="text-sm text-gray-400">Current Moon</div>
+            <div className="text-purple-300">{currentMoonPhase}</div>
+          </div>
         </div>
-      ) : (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {filteredEntries.map((entry) => (
-            <Link
-              key={entry.id}
-              href={`/dashboard/journal/${entry.id}`}
-              className="card-mystical hover:scale-[1.02] transition-transform"
-            >
-              <div className="flex items-start justify-between mb-3">
-                <h3 className="font-semibold text-lg line-clamp-1">
-                  {entry.title || 'Untitled Entry'}
-                </h3>
-                <Calendar className="w-4 h-4 text-purple-400 flex-shrink-0 ml-2" />
+      </div>
+
+      <form onSubmit={handleSave} className="space-y-6">
+        <div className="card-mystical">
+          <div className="space-y-4">
+            {/* Title */}
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Title (Optional)
+              </label>
+              <input
+                type="text"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="Give your entry a title..."
+                className="input-mystical w-full"
+              />
+            </div>
+
+            {/* Mood */}
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Current Mood
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {MOODS.map((m) => (
+                  <button
+                    key={m}
+                    type="button"
+                    onClick={() => setMood(mood === m ? '' : m)}
+                    className={`px-3 py-1 rounded-full text-sm transition-all ${
+                      mood === m
+                        ? 'bg-purple-600 text-white'
+                        : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+                    }`}
+                  >
+                    {m}
+                  </button>
+                ))}
               </div>
-              
-              <p className="text-gray-400 text-sm line-clamp-3 mb-4">
-                {entry.content}
+            </div>
+
+            {/* Content */}
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Your Reflection
+              </label>
+              <textarea
+                value={content}
+                onChange={(e) => setContent(e.target.value)}
+                placeholder="Share your thoughts, experiences, or spiritual insights..."
+                className="input-mystical w-full min-h-[300px] resize-none"
+                required
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Prompt Ideas */}
+        <div className="card-mystical bg-purple-900/20">
+          <div className="flex items-start space-x-3">
+            <Sparkles className="w-5 h-5 text-yellow-300 flex-shrink-0 mt-0.5" />
+            <div className="text-sm text-gray-300">
+              <p className="font-medium mb-2">Reflection Prompts:</p>
+              <ul className="space-y-1 text-gray-400">
+                <li>• What synchronicities did you notice today?</li>
+                <li>• How did the moon's energy affect you?</li>
+                <li>• What messages did your intuition share?</li>
+                <li>• What are you grateful for in this moment?</li>
+              </ul>
+              <p className="text-xs text-purple-400 mt-3">
+                ✨ Beatrice will automatically provide a reflection on your entry after saving.
               </p>
-              
-              <div className="flex items-center justify-between text-xs text-gray-500">
-                <div className="flex items-center space-x-3">
-                  <span>{format(new Date(entry.created_at), 'MMM d, yyyy')}</span>
-                  {entry.mood && (
-                    <>
-                      <span>•</span>
-                      <span className="text-purple-400">{entry.mood}</span>
-                    </>
-                  )}
-                </div>
-                {entry.moon_phase && (
-                  <span className="text-purple-300">{entry.moon_phase}</span>
-                )}
-              </div>
-            </Link>
-          ))}
+            </div>
+          </div>
         </div>
-      )}
+
+        {/* Actions */}
+        <div className="flex justify-end space-x-3">
+          <Link 
+            href="/dashboard/journal"
+            className="px-6 py-3 border border-purple-500 text-purple-300 rounded-lg hover:bg-purple-500/10 transition-colors"
+          >
+            Cancel
+          </Link>
+          <button
+            type="submit"
+            disabled={saving || !content.trim()}
+            className="btn-mystical disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <Save className="w-5 h-5 mr-2" />
+            {saving ? 'Saving & requesting reflection...' : 'Save Entry'}
+          </button>
+        </div>
+      </form>
     </div>
   )
 }

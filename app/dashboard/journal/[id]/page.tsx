@@ -33,12 +33,14 @@ export default function JournalEntryPage({ params }: { params: { id: string } })
 
   useEffect(() => {
     fetchEntry()
-    
-    // Check if we should request Beatrice's reflection
-    if (searchParams.get('requestReflection') === 'true') {
+  }, [params.id])
+
+  useEffect(() => {
+    // Request Beatrice's reflection after entry is loaded
+    if (entry && searchParams.get('requestReflection') === 'true' && !entry.beatrice_reflection) {
       requestBeatriceReflection()
     }
-  }, [params.id])
+  }, [entry])
 
   const fetchEntry = async () => {
     try {
@@ -288,6 +290,22 @@ Please offer your reflection in 2-3 paragraphs.`
               </div>
             </div>
           </div>
+        ) : requestingReflection ? (
+          <div className="card-mystical bg-purple-900/20 border-purple-500/30">
+            <div className="flex items-start space-x-3">
+              <Moon className="w-6 h-6 text-purple-300 flex-shrink-0 mt-1 animate-pulse" />
+              <div className="flex-1">
+                <h3 className="font-semibold text-purple-300 mb-2">
+                  Beatrice is reading your entry...
+                </h3>
+                <div className="space-y-2">
+                  <div className="h-4 bg-purple-800/30 rounded animate-pulse"></div>
+                  <div className="h-4 bg-purple-800/30 rounded animate-pulse w-5/6"></div>
+                  <div className="h-4 bg-purple-800/30 rounded animate-pulse w-4/6"></div>
+                </div>
+              </div>
+            </div>
+          </div>
         ) : (
           <div className="text-center">
             <button
@@ -296,7 +314,7 @@ Please offer your reflection in 2-3 paragraphs.`
               className="inline-flex items-center text-purple-400 hover:text-purple-300 transition-colors"
             >
               <MessageCircle className="w-5 h-5 mr-2" />
-              {requestingReflection ? 'Requesting reflection...' : 'Ask Beatrice for a reflection'}
+              Ask Beatrice for a reflection
             </button>
           </div>
         )}

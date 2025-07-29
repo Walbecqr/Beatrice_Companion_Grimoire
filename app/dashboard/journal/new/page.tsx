@@ -46,10 +46,8 @@ export default function NewJournalPage() {
 
       if (error) throw error
 
-      // Optionally, ask Beatrice for a reflection
-      const askBeatrice = confirm('Would you like Beatrice to offer a reflection on your entry?')
-      if (askBeatrice && data) {
-        // Navigate to the entry page where we can add Beatrice's reflection
+      // Automatically navigate to the entry page and request Beatrice's reflection
+      if (data) {
         router.push(`/dashboard/journal/${data.id}?requestReflection=true`)
       } else {
         router.push('/dashboard/journal')
@@ -180,7 +178,7 @@ export default function NewJournalPage() {
             className="btn-mystical disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Save className="w-5 h-5 mr-2" />
-            {saving ? 'Saving...' : 'Save Entry'}
+            {saving ? 'Saving & requesting reflection...' : 'Save Entry'}
           </button>
         </div>
       </form>
