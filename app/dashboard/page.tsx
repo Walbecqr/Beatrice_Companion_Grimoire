@@ -1,19 +1,23 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Moon, BookOpen, MessageCircle, Sparkles } from 'lucide-react'
 import Link from 'next/link'
 import { format } from 'date-fns'
 import { getMoonPhase } from '@/lib/utils/moon-phase'
+import { DailyCheckinWidget } from '@/components/dashboard/daily-checkin-widget'
 
 export default function DashboardPage() {
-  const [profile, setProfile] = useState<{ display_name?: string } | null>(null)
-  const [recentEntries, setRecentEntries] = useState<{ id: string; title?: string; content: string; created_at: string; moon_phase?: string }[]>([])
-  const [todayCheckin, setTodayCheckin] = useState<{ id: string } | null>(null)
+  const [profile, setProfile] = useState<any>(null)
+  const [recentEntries, setRecentEntries] = useState<any[]>([])
   const supabase = createClient()
 
-  const fetchDashboardData = useCallback(async () => {
+  useEffect(() => {
+    fetchDashboardData()
+  }, [])
+
+  const fetchDashboardData = async () => {
     // Get user profile
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
@@ -35,22 +39,7 @@ export default function DashboardPage() {
       .limit(3)
 
     setRecentEntries(entries || [])
-
-    // Check for today's check-in
-    const today = new Date().toISOString().split('T')[0]
-    const { data: checkin } = await supabase
-      .from('daily_checkins')
-      .select('*')
-      .gte('created_at', `${today}T00:00:00`)
-      .lte('created_at', `${today}T23:59:59`)
-      .single()
-
-    setTodayCheckin(checkin)
-  }, [supabase])
-
-  useEffect(() => {
-    fetchDashboardData()
-  }, [fetchDashboardData])
+  }
 
   const currentMoonPhase = getMoonPhase(new Date())
 
@@ -71,13 +60,16 @@ export default function DashboardPage() {
         </div>
       </div>
 
+      {/* Daily Check-in Widget */}
+      <DailyCheckinWidget />
+
       {/* Quick Actions */}
       <div className="grid md:grid-cols-3 gap-6">
         <Link href="/dashboard/chat" className="card-mystical hover:scale-105 transition-transform">
           <MessageCircle className="w-10 h-10 text-purple-400 mb-3" />
           <h3 className="text-lg font-semibold mb-1">Chat with Beatrice</h3>
           <p className="text-sm text-gray-400">
-            {todayCheckin ? 'Continue your conversation' : 'Start your daily check-in'}
+            Continue your conversation with Beatrice
           </p>
         </Link>
 
@@ -134,9 +126,9 @@ export default function DashboardPage() {
           <div>
             <h3 className="font-semibold mb-2">Daily Wisdom</h3>
             <p className="text-gray-300 italic">
-              &ldquo;The moon does not fight. It attacks no one. It does not worry. 
+              "The moon does not fight. It attacks no one. It does not worry. 
               It does not try to crush others. It keeps to its course, 
-              but by its very nature, it gently influences.&rdquo;
+              but by its very nature, it gently influences."
             </p>
           </div>
         </div>

@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Send, Moon, Sparkles } from 'lucide-react'
 import { format } from 'date-fns'
+import { useSearchParams } from 'next/navigation'
 
 interface Message {
   role: 'user' | 'assistant'
@@ -18,9 +19,15 @@ export default function ChatPage() {
   const [sessionId, setSessionId] = useState<string | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const supabase = createClient()
+  const searchParams = useSearchParams()
 
   useEffect(() => {
-    loadChatHistory()
+    const checkinId = searchParams.get('checkin')
+    if (checkinId) {
+      handleCheckinContext(checkinId)
+    } else {
+      loadChatHistory()
+    }
   }, [])
 
   useEffect(() => {
@@ -29,6 +36,33 @@ export default function ChatPage() {
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }
+
+  const handleCheckinContext = async (checkinId: string) => {
+    try {
+      // Fetch the check-in details
+      const { data: checkin, error } = await supabase
+        .from('daily_checkins')
+        .select('*')
+        .eq('id', checkinId)
+        .single()
+
+      if (error || !checkin) {
+        loadChatHistory()
+        return
+      }
+
+      // Create an initial message from Beatrice about the check-in
+      const contextMessage: Message = {
+        role: 'assistant',
+        content: `I see you're here for your daily check-in. ${checkin.prompt}\n\nTake your time to reflect, and share whatever feels right in this moment. I'm here to listen and support you. 💜`,
+      }
+
+      setMessages([contextMessage])
+    } catch (error) {
+      console.error('Error loading check-in context:', error)
+      loadChatHistory()
+    }
   }
 
   const loadChatHistory = async () => {

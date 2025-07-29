@@ -8,6 +8,7 @@ import {
   BookOpen, 
   Sparkles, 
   Moon,
+  Calendar,
   Settings,
   LogOut
 } from 'lucide-react'
@@ -18,6 +19,7 @@ const navItems = [
   { href: '/dashboard', icon: Home, label: 'Dashboard' },
   { href: '/dashboard/chat', icon: MessageCircle, label: 'Chat with Beatrice' },
   { href: '/dashboard/journal', icon: BookOpen, label: 'Journal' },
+  { href: '/dashboard/checkins', icon: Calendar, label: 'Daily Check-ins' },
   { href: '/dashboard/rituals', icon: Sparkles, label: 'Rituals' },
   { href: '/dashboard/settings', icon: Settings, label: 'Settings' },
 ]
