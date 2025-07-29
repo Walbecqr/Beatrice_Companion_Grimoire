@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft, Save, Moon, Sparkles } from 'lucide-react'
 import { getMoonPhase } from '@/lib/utils/moon-phase'
+import { TagSelector } from '@/components/ui/tag-selector'
 
 const MOODS = [
   'Peaceful', 'Anxious', 'Grateful', 'Empowered', 
@@ -16,6 +17,7 @@ export default function NewJournalPage() {
   const [title, setTitle] = useState('')
   const [content, setContent] = useState('')
   const [mood, setMood] = useState('')
+  const [selectedTags, setSelectedTags] = useState<string[]>([])
   const [saving, setSaving] = useState(false)
   const router = useRouter()
   const supabase = createClient()
@@ -45,6 +47,23 @@ export default function NewJournalPage() {
         .single()
 
       if (error) throw error
+
+      // Save tag relationships
+      if (data && selectedTags.length > 0) {
+        const tagRelations = selectedTags.map(tagId => ({
+          journal_entry_id: data.id,
+          tag_id: tagId
+        }))
+
+        const { error: tagError } = await supabase
+          .from('journal_entry_tags')
+          .insert(tagRelations)
+
+        if (tagError) {
+          console.error('Error saving tags:', tagError)
+          // Continue even if tags fail to save
+        }
+      }
 
       // Automatically navigate to the entry page and request Beatrice's reflection
       if (data) {
@@ -132,6 +151,17 @@ export default function NewJournalPage() {
               </div>
             </div>
 
+            {/* Tags */}
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Tags
+              </label>
+              <TagSelector
+                selectedTags={selectedTags}
+                onTagsChange={setSelectedTags}
+              />
+            </div>
+
             {/* Content */}
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-2">
@@ -160,6 +190,9 @@ export default function NewJournalPage() {
                 <li>• What messages did your intuition share?</li>
                 <li>• What are you grateful for in this moment?</li>
               </ul>
+              <p className="text-xs text-purple-400 mt-3">
+                ✨ Beatrice will automatically provide a reflection on your entry after saving.
+              </p>
             </div>
           </div>
         </div>
