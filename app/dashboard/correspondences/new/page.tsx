@@ -1,0 +1,422 @@
+'use client'
+
+import { useState } from 'react'
+import { createClient } from '@/lib/supabase/client'
+import { useRouter } from 'next/navigation'
+import Link from 'next/link'
+import { ArrowLeft, Save, Plus, X, Sparkles, BookOpen } from 'lucide-react'
+
+const CATEGORIES = [
+  { value: 'herbs', label: 'Herbs & Plants', icon: '🌿' },
+  { value: 'crystals', label: 'Crystals & Stones', icon: '💎' },
+  { value: 'colors', label: 'Colors', icon: '🎨' },
+  { value: 'elements', label: 'Elements', icon: '🔥' },
+  { value: 'tools', label: 'Magical Tools', icon: '🔮' },
+  { value: 'incense', label: 'Incense & Resins', icon: '🕯️' },
+  { value: 'oils', label: 'Essential Oils', icon: '🫗' },
+  { value: 'candles', label: 'Candles', icon: '🕯️' },
+  { value: 'symbols', label: 'Symbols & Sigils', icon: '✨' },
+  { value: 'deities', label: 'Deities & Spirits', icon: '👑' },
+  { value: 'animals', label: 'Animal Spirits', icon: '🦋' },
+  { value: 'trees', label: 'Sacred Trees', icon: '🌳' },
+  { value: 'other', label: 'Other', icon: '📜' }
+]
+
+const MAGICAL_PROPERTIES = [
+  'protection', 'love', 'abundance', 'healing', 'banishing', 'cleansing',
+  'divination', 'wisdom', 'courage', 'peace', 'psychic_abilities', 
+  'spiritual_growth', 'grounding', 'transformation', 'communication',
+  'prosperity', 'fertility', 'luck', 'success', 'creativity', 'intuition',
+  'balance', 'harmony', 'strength', 'clarity', 'manifestation'
+]
+
+const ELEMENTS = ['Fire', 'Water', 'Earth', 'Air', 'Spirit']
+const PLANETS = ['Sun', 'Moon', 'Mercury', 'Venus', 'Mars', 'Jupiter', 'Saturn', 'Uranus', 'Neptune', 'Pluto']
+const CHAKRAS = ['Root', 'Sacral', 'Solar Plexus', 'Heart', 'Throat', 'Third Eye', 'Crown']
+
+export default function NewCorrespondencePage() {
+  const [name, setName] = useState('')
+  const [category, setCategory] = useState('')
+  const [selectedProperties, setSelectedProperties] = useState<string[]>([])
+  const [traditionalUses, setTraditionalUses] = useState<string[]>([''])
+  const [personalNotes, setPersonalNotes] = useState('')
+  const [element, setElement] = useState('')
+  const [planet, setPlanet] = useState('')
+  const [zodiacSign, setZodiacSign] = useState('')
+  const [chakra, setChakra] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [newProperty, setNewProperty] = useState('')
+  
+  const router = useRouter()
+  const supabase = createClient()
+
+  const toggleProperty = (property: string) => {
+    if (selectedProperties.includes(property)) {
+      setSelectedProperties(selectedProperties.filter(p => p !== property))
+    } else {
+      setSelectedProperties([...selectedProperties, property])
+    }
+  }
+
+  const addCustomProperty = () => {
+    if (newProperty.trim() && !selectedProperties.includes(newProperty.toLowerCase())) {
+      setSelectedProperties([...selectedProperties, newProperty.toLowerCase().replace(' ', '_')])
+      setNewProperty('')
+    }
+  }
+
+  const addTraditionalUse = () => {
+    setTraditionalUses([...traditionalUses, ''])
+  }
+
+  const updateTraditionalUse = (index: number, value: string) => {
+    const updated = [...traditionalUses]
+    updated[index] = value
+    setTraditionalUses(updated)
+  }
+
+  const removeTraditionalUse = (index: number) => {
+    setTraditionalUses(traditionalUses.filter((_, i) => i !== index))
+  }
+
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!name.trim() || !category || selectedProperties.length === 0) return
+
+    setSaving(true)
+
+    try {
+      const filteredUses = traditionalUses.filter(use => use.trim())
+      
+      const response = await fetch('/api/correspondences', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: name.trim(),
+          category,
+          magical_properties: selectedProperties,
+          traditional_uses: filteredUses,
+          personal_notes: personalNotes.trim() || null,
+          element: element || null,
+          planet: planet || null,
+          zodiac_sign: zodiacSign.trim() || null,
+          chakra: chakra || null,
+          is_personal: true
+        }),
+      })
+
+      if (!response.ok) throw new Error('Failed to save correspondence')
+
+      router.push('/dashboard/correspondences')
+    } catch (error) {
+      console.error('Error saving correspondence:', error)
+      alert('Failed to save correspondence. Please try again.')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const getPropertyColor = (property: string) => {
+    const colorMap: Record<string, string> = {
+      'protection': 'text-blue-400 bg-blue-900/20',
+      'love': 'text-pink-400 bg-pink-900/20',
+      'abundance': 'text-green-400 bg-green-900/20',
+      'healing': 'text-emerald-400 bg-emerald-900/20',
+      'banishing': 'text-red-400 bg-red-900/20',
+      'cleansing': 'text-cyan-400 bg-cyan-900/20',
+      'divination': 'text-purple-400 bg-purple-900/20',
+      'wisdom': 'text-indigo-400 bg-indigo-900/20',
+      'courage': 'text-orange-400 bg-orange-900/20',
+      'peace': 'text-sky-400 bg-sky-900/20',
+      'psychic_abilities': 'text-violet-400 bg-violet-900/20',
+      'spiritual_growth': 'text-amber-400 bg-amber-900/20',
+      'grounding': 'text-stone-400 bg-stone-900/20',
+      'transformation': 'text-fuchsia-400 bg-fuchsia-900/20',
+      'communication': 'text-yellow-400 bg-yellow-900/20'
+    }
+    return colorMap[property] || 'text-gray-400 bg-gray-900/20'
+  }
+
+  return (
+    <div className="max-w-4xl mx-auto">
+      <div className="mb-6">
+        <Link 
+          href="/dashboard/correspondences" 
+          className="inline-flex items-center text-purple-400 hover:text-purple-300 mb-4"
+        >
+          <ArrowLeft className="w-4 h-4 mr-2" />
+          Back to Correspondences
+        </Link>
+
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-gradient">Add New Correspondence</h1>
+            <p className="text-sm text-gray-400 mt-1">
+              Add to your personal magical reference library
+            </p>
+          </div>
+          <BookOpen className="w-12 h-12 text-purple-300" />
+        </div>
+      </div>
+
+      <form onSubmit={handleSave} className="space-y-6">
+        <div className="card-mystical">
+          <div className="space-y-6">
+            {/* Basic Information */}
+            <div className="grid md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Name *
+                </label>
+                <input
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="e.g., Rose Quartz, Sage, Purple Candle..."
+                  className="input-mystical w-full"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Category *
+                </label>
+                <select
+                  value={category}
+                  onChange={(e) => setCategory(e.target.value)}
+                  className="input-mystical w-full"
+                  required
+                >
+                  <option value="">Select a category</option>
+                  {CATEGORIES.map(cat => (
+                    <option key={cat.value} value={cat.value}>
+                      {cat.icon} {cat.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* Magical Properties */}
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-3">
+                Magical Properties *
+              </label>
+              
+              {/* Selected Properties */}
+              <div className="flex flex-wrap gap-2 mb-4">
+                {selectedProperties.map(property => (
+                  <span
+                    key={property}
+                    className={`inline-flex items-center px-3 py-1 rounded-full text-sm ${getPropertyColor(property)}`}
+                  >
+                    <Sparkles className="w-3 h-3 mr-1" />
+                    {property.replace('_', ' ')}
+                    <button
+                      type="button"
+                      onClick={() => setSelectedProperties(selectedProperties.filter(p => p !== property))}
+                      className="ml-2 hover:text-white transition-colors"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </span>
+                ))}
+              </div>
+
+              {/* Available Properties */}
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 mb-4">
+                {MAGICAL_PROPERTIES.map(property => (
+                  <button
+                    key={property}
+                    type="button"
+                    onClick={() => toggleProperty(property)}
+                    className={`text-left px-3 py-2 rounded-lg text-sm transition-all ${
+                      selectedProperties.includes(property)
+                        ? 'bg-purple-600/20 border border-purple-500/50 text-purple-300'
+                        : 'bg-gray-800 hover:bg-gray-700 text-gray-300'
+                    }`}
+                  >
+                    {property.replace('_', ' ')}
+                  </button>
+                ))}
+              </div>
+
+              {/* Add Custom Property */}
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={newProperty}
+                  onChange={(e) => setNewProperty(e.target.value)}
+                  placeholder="Add custom property..."
+                  className="input-mystical flex-1"
+                  onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addCustomProperty())}
+                />
+                <button
+                  type="button"
+                  onClick={addCustomProperty}
+                  className="btn-mystical px-4"
+                >
+                  <Plus className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+
+            {/* Traditional Uses */}
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Traditional Uses
+              </label>
+              <div className="space-y-2">
+                {traditionalUses.map((use, index) => (
+                  <div key={index} className="flex gap-2">
+                    <input
+                      type="text"
+                      value={use}
+                      onChange={(e) => updateTraditionalUse(index, e.target.value)}
+                      placeholder={`Traditional use ${index + 1}...`}
+                      className="input-mystical flex-1"
+                    />
+                    {traditionalUses.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => removeTraditionalUse(index)}
+                        className="p-2 text-gray-400 hover:text-red-400 transition-colors"
+                      >
+                        <X className="w-5 h-5" />
+                      </button>
+                    )}
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  onClick={addTraditionalUse}
+                  className="text-purple-400 hover:text-purple-300 text-sm flex items-center gap-1"
+                >
+                  <Plus className="w-4 h-4" />
+                  Add another use
+                </button>
+              </div>
+            </div>
+
+            {/* Personal Notes */}
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Personal Notes & Experiences
+              </label>
+              <textarea
+                value={personalNotes}
+                onChange={(e) => setPersonalNotes(e.target.value)}
+                placeholder="Share your personal experiences, observations, or unique ways you use this correspondence..."
+                className="input-mystical w-full min-h-[120px] resize-none"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Additional Correspondences */}
+        <div className="card-mystical">
+          <h3 className="text-lg font-semibold mb-4">Additional Correspondences</h3>
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Element
+              </label>
+              <select
+                value={element}
+                onChange={(e) => setElement(e.target.value)}
+                className="input-mystical w-full"
+              >
+                <option value="">Select element</option>
+                {ELEMENTS.map(el => (
+                  <option key={el} value={el}>{el}</option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Planet
+              </label>
+              <select
+                value={planet}
+                onChange={(e) => setPlanet(e.target.value)}
+                className="input-mystical w-full"
+              >
+                <option value="">Select planet</option>
+                {PLANETS.map(p => (
+                  <option key={p} value={p}>{p}</option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Zodiac Sign
+              </label>
+              <input
+                type="text"
+                value={zodiacSign}
+                onChange={(e) => setZodiacSign(e.target.value)}
+                placeholder="e.g., Leo, Scorpio..."
+                className="input-mystical w-full"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Chakra
+              </label>
+              <select
+                value={chakra}
+                onChange={(e) => setChakra(e.target.value)}
+                className="input-mystical w-full"
+              >
+                <option value="">Select chakra</option>
+                {CHAKRAS.map(c => (
+                  <option key={c} value={c}>{c}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+        </div>
+
+        {/* Tips */}
+        <div className="card-mystical bg-purple-900/20">
+          <div className="flex items-start space-x-3">
+            <BookOpen className="w-5 h-5 text-purple-300 flex-shrink-0 mt-0.5" />
+            <div className="text-sm text-gray-300">
+              <p className="font-medium mb-2">Building Your Correspondence Library:</p>
+              <ul className="space-y-1 text-gray-400 text-xs">
+                <li>• Include both traditional knowledge and personal experiences</li>
+                <li>• Add entries as you discover new correspondences in practice</li>
+                <li>• Your personal correspondences will be marked distinctly from traditional ones</li>
+                <li>• Use the search and filter features to quickly find what you need during rituals</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        {/* Actions */}
+        <div className="flex justify-end space-x-3">
+          <Link 
+            href="/dashboard/correspondences"
+            className="px-6 py-3 border border-purple-500 text-purple-300 rounded-lg hover:bg-purple-500/10 transition-colors"
+          >
+            Cancel
+          </Link>
+          <button
+            type="submit"
+            disabled={saving || !name.trim() || !category || selectedProperties.length === 0}
+            className="btn-mystical disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <Save className="w-5 h-5 mr-2" />
+            {saving ? 'Saving...' : 'Save Correspondence'}
+          </button>
+        </div>
+      </form>
+    </div>
+  )
+}

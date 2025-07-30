@@ -10,7 +10,8 @@ import {
   Moon,
   Calendar,
   Settings,
-  LogOut
+  LogOut,
+  Search
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
@@ -22,6 +23,7 @@ const navItems = [
   { href: '/dashboard/checkins', icon: Calendar, label: 'Daily Check-ins' },
   { href: '/dashboard/lunar-calendar', icon: Moon, label: 'Lunar Calendar' },
   { href: '/dashboard/rituals', icon: Sparkles, label: 'Rituals' },
+  { href: '/dashboard/correspondences', icon: Search, label: 'Correspondences' },
   { href: '/dashboard/settings', icon: Settings, label: 'Settings' },
 ]
 
@@ -49,7 +51,8 @@ export function Sidebar() {
       <nav className="flex-1 p-4">
         <ul className="space-y-2">
           {navItems.map((item) => {
-            const isActive = pathname === item.href
+            const isActive = pathname === item.href || 
+              (item.href !== '/dashboard' && pathname.startsWith(item.href))
             return (
               <li key={item.href}>
                 <Link
