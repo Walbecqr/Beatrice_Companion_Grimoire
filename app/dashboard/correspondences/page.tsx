@@ -45,10 +45,6 @@ export default function CorrespondencesPage() {
   const [showFilters, setShowFilters] = useState(false)
   const supabase = createClient()
 
-  useEffect(() => {
-    fetchCorrespondences()
-  }, [fetchCorrespondences])
-
   const fetchCorrespondences = useCallback(async () => {
     try {
       const { data, error } = await supabase
@@ -64,6 +60,10 @@ export default function CorrespondencesPage() {
       setLoading(false)
     }
   }, [supabase])
+
+  useEffect(() => {
+    fetchCorrespondences()
+  }, [fetchCorrespondences])
 
   const toggleFavorite = async (id: string, currentState: boolean) => {
     try {
