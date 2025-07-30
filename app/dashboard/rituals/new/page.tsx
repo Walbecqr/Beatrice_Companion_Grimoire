@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft, Save, Moon, Sparkles, Plus, X, Calendar, Clock } from 'lucide-react'
 import { getMoonPhase } from '@/lib/utils/moon-phase'
@@ -39,6 +39,9 @@ const COMMON_TOOLS = [
 ]
 
 export default function NewRitualPage() {
+  const searchParams = useSearchParams()
+  const dateParam = searchParams.get('date')
+  
   const [title, setTitle] = useState('')
   const [intent, setIntent] = useState('')
   const [description, setDescription] = useState('')
@@ -46,7 +49,9 @@ export default function NewRitualPage() {
   const [newTool, setNewTool] = useState('')
   const [outcome, setOutcome] = useState('')
   const [performedAt, setPerformedAt] = useState(
-    format(new Date(), "yyyy-MM-dd'T'HH:mm")
+    dateParam 
+      ? format(new Date(dateParam), "yyyy-MM-dd'T'HH:mm")
+      : format(new Date(), "yyyy-MM-dd'T'HH:mm")
   )
   const [selectedTemplate, setSelectedTemplate] = useState<keyof typeof RITUAL_TEMPLATES | null>(null)
   const [showToolSuggestions, setShowToolSuggestions] = useState(false)

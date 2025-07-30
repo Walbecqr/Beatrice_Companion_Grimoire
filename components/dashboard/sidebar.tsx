@@ -20,6 +20,7 @@ const navItems = [
   { href: '/dashboard/chat', icon: MessageCircle, label: 'Chat with Beatrice' },
   { href: '/dashboard/journal', icon: BookOpen, label: 'Journal' },
   { href: '/dashboard/checkins', icon: Calendar, label: 'Daily Check-ins' },
+  { href: '/dashboard/lunar-calendar', icon: Moon, label: 'Lunar Calendar' },
   { href: '/dashboard/rituals', icon: Sparkles, label: 'Rituals' },
   { href: '/dashboard/settings', icon: Settings, label: 'Settings' },
 ]
