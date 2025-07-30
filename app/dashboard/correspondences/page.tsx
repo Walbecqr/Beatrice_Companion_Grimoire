@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Plus, Search, BookOpen, Filter, Star, Eye, Grid, List, Sparkles } from 'lucide-react'
 import Link from 'next/link'
@@ -47,9 +47,9 @@ export default function CorrespondencesPage() {
 
   useEffect(() => {
     fetchCorrespondences()
-  }, [])
+  }, [fetchCorrespondences])
 
-  const fetchCorrespondences = async () => {
+  const fetchCorrespondences = useCallback(async () => {
     try {
       const { data, error } = await supabase
         .from('correspondences')
@@ -63,7 +63,7 @@ export default function CorrespondencesPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [supabase])
 
   const toggleFavorite = async (id: string, currentState: boolean) => {
     try {
@@ -109,7 +109,7 @@ export default function CorrespondencesPage() {
   })
 
   const getCategoryIcon = (category: string) => {
-    const iconMap = {
+    const iconMap: Record<string, string> = {
       'herbs': '🌿',
       'crystals': '💎',
       'colors': '🎨',
@@ -384,7 +384,7 @@ export default function CorrespondencesPage() {
                 {/* Personal Notes Preview */}
                 {item.personal_notes && (
                   <div className="text-sm text-gray-300 mb-3 bg-purple-900/10 p-2 rounded italic">
-                    "{item.personal_notes.slice(0, 100)}{item.personal_notes.length > 100 ? '...' : ''}"
+                    &ldquo;{item.personal_notes.slice(0, 100)}{item.personal_notes.length > 100 ? '...' : ''}&rdquo;
                   </div>
                 )}
 
