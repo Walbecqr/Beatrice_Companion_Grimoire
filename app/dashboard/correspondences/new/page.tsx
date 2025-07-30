@@ -27,25 +27,49 @@ const MAGICAL_PROPERTIES = [
   'divination', 'wisdom', 'courage', 'peace', 'psychic_abilities', 
   'spiritual_growth', 'grounding', 'transformation', 'communication',
   'prosperity', 'fertility', 'luck', 'success', 'creativity', 'intuition',
-  'balance', 'harmony', 'strength', 'clarity', 'manifestation'
+  'balance', 'harmony', 'strength', 'clarity', 'manifestation', 'warding',
+  'purification', 'conflict_resolution'
 ]
 
 const ELEMENTS = ['Fire', 'Water', 'Earth', 'Air', 'Spirit']
 const PLANETS = ['Sun', 'Moon', 'Mercury', 'Venus', 'Mars', 'Jupiter', 'Saturn', 'Uranus', 'Neptune', 'Pluto']
+const ZODIAC_SIGNS = [
+  'Aries', 'Taurus', 'Gemini', 'Cancer', 'Leo', 'Virgo',
+  'Libra', 'Scorpio', 'Sagittarius', 'Capricorn', 'Aquarius', 'Pisces'
+]
 const CHAKRAS = ['Root', 'Sacral', 'Solar Plexus', 'Heart', 'Throat', 'Third Eye', 'Crown']
+const ENERGY_TYPES = ['masculine', 'feminine']
 
 export default function NewCorrespondencePage() {
   const [name, setName] = useState('')
   const [category, setCategory] = useState('')
+  const [description, setDescription] = useState('')
+  const [botanicalName, setBotanicalName] = useState('')
+  const [commonNames, setCommonNames] = useState<string[]>([''])
+  
+  // Magical Properties
   const [selectedProperties, setSelectedProperties] = useState<string[]>([])
+  const [newProperty, setNewProperty] = useState('')
+  
+  // Applications and Uses
   const [traditionalUses, setTraditionalUses] = useState<string[]>([''])
+  const [medicalUses, setMedicalUses] = useState<string[]>([''])
+  const [personalApplications, setPersonalApplications] = useState<string[]>([''])
   const [personalNotes, setPersonalNotes] = useState('')
+  
+  // Correspondences
   const [element, setElement] = useState('')
   const [planet, setPlanet] = useState('')
   const [zodiacSign, setZodiacSign] = useState('')
   const [chakra, setChakra] = useState('')
+  const [energyType, setEnergyType] = useState('')
+  
+  // Spiritual & Cultural
+  const [deities, setDeities] = useState<string[]>([''])
+  const [folklore, setFolklore] = useState('')
+  const [historicalUses, setHistoricalUses] = useState<string[]>([''])
+  
   const [saving, setSaving] = useState(false)
-  const [newProperty, setNewProperty] = useState('')
   
   const router = useRouter()
   const supabase = createClient()
@@ -65,18 +89,19 @@ export default function NewCorrespondencePage() {
     }
   }
 
-  const addTraditionalUse = () => {
-    setTraditionalUses([...traditionalUses, ''])
+  // Generic array management functions
+  const addArrayItem = (array: string[], setArray: (arr: string[]) => void) => {
+    setArray([...array, ''])
   }
 
-  const updateTraditionalUse = (index: number, value: string) => {
-    const updated = [...traditionalUses]
+  const updateArrayItem = (array: string[], setArray: (arr: string[]) => void, index: number, value: string) => {
+    const updated = [...array]
     updated[index] = value
-    setTraditionalUses(updated)
+    setArray(updated)
   }
 
-  const removeTraditionalUse = (index: number) => {
-    setTraditionalUses(traditionalUses.filter((_, i) => i !== index))
+  const removeArrayItem = (array: string[], setArray: (arr: string[]) => void, index: number) => {
+    setArray(array.filter((_, i) => i !== index))
   }
 
   const handleSave = async (e: React.FormEvent) => {
@@ -86,7 +111,7 @@ export default function NewCorrespondencePage() {
     setSaving(true)
 
     try {
-      const filteredUses = traditionalUses.filter(use => use.trim())
+      const filterEmpty = (arr: string[]) => arr.filter(item => item.trim())
       
       const response = await fetch('/api/correspondences', {
         method: 'POST',
@@ -96,13 +121,22 @@ export default function NewCorrespondencePage() {
         body: JSON.stringify({
           name: name.trim(),
           category,
+          description: description.trim() || null,
+          botanical_name: botanicalName.trim() || null,
+          common_names: filterEmpty(commonNames),
           magical_properties: selectedProperties,
-          traditional_uses: filteredUses,
+          traditional_uses: filterEmpty(traditionalUses),
+          medical_uses: filterEmpty(medicalUses),
+          personal_applications: filterEmpty(personalApplications),
           personal_notes: personalNotes.trim() || null,
           element: element || null,
           planet: planet || null,
-          zodiac_sign: zodiacSign.trim() || null,
+          zodiac_sign: zodiacSign || null,
           chakra: chakra || null,
+          energy_type: energyType || null,
+          deities: filterEmpty(deities),
+          folklore: folklore.trim() || null,
+          historical_uses: filterEmpty(historicalUses),
           is_personal: true
         }),
       })
@@ -162,10 +196,11 @@ export default function NewCorrespondencePage() {
       </div>
 
       <form onSubmit={handleSave} className="space-y-6">
+        {/* Basic Information */}
         <div className="card-mystical">
-          <div className="space-y-6">
-            {/* Basic Information */}
-            <div className="grid md:grid-cols-2 gap-6">
+          <h3 className="text-lg font-semibold mb-4">Basic Information</h3>
+          <div className="space-y-4">
+            <div className="grid md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">
                   Name *
@@ -200,89 +235,51 @@ export default function NewCorrespondencePage() {
               </div>
             </div>
 
-            {/* Magical Properties */}
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-3">
-                Magical Properties *
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Description
               </label>
-              
-              {/* Selected Properties */}
-              <div className="flex flex-wrap gap-2 mb-4">
-                {selectedProperties.map(property => (
-                  <span
-                    key={property}
-                    className={`inline-flex items-center px-3 py-1 rounded-full text-sm ${getPropertyColor(property)}`}
-                  >
-                    <Sparkles className="w-3 h-3 mr-1" />
-                    {property.replace('_', ' ')}
-                    <button
-                      type="button"
-                      onClick={() => setSelectedProperties(selectedProperties.filter(p => p !== property))}
-                      className="ml-2 hover:text-white transition-colors"
-                    >
-                      <X className="w-3 h-3" />
-                    </button>
-                  </span>
-                ))}
-              </div>
+              <textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Describe the physical appearance, origin, and basic properties..."
+                className="input-mystical w-full min-h-[100px] resize-none"
+              />
+            </div>
 
-              {/* Available Properties */}
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 mb-4">
-                {MAGICAL_PROPERTIES.map(property => (
-                  <button
-                    key={property}
-                    type="button"
-                    onClick={() => toggleProperty(property)}
-                    className={`text-left px-3 py-2 rounded-lg text-sm transition-all ${
-                      selectedProperties.includes(property)
-                        ? 'bg-purple-600/20 border border-purple-500/50 text-purple-300'
-                        : 'bg-gray-800 hover:bg-gray-700 text-gray-300'
-                    }`}
-                  >
-                    {property.replace('_', ' ')}
-                  </button>
-                ))}
-              </div>
-
-              {/* Add Custom Property */}
-              <div className="flex gap-2">
+            <div className="grid md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Botanical/Scientific Name
+                </label>
                 <input
                   type="text"
-                  value={newProperty}
-                  onChange={(e) => setNewProperty(e.target.value)}
-                  placeholder="Add custom property..."
-                  className="input-mystical flex-1"
-                  onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addCustomProperty())}
+                  value={botanicalName}
+                  onChange={(e) => setBotanicalName(e.target.value)}
+                  placeholder="e.g., Aloe barbadensis miller"
+                  className="input-mystical w-full"
                 />
-                <button
-                  type="button"
-                  onClick={addCustomProperty}
-                  className="btn-mystical px-4"
-                >
-                  <Plus className="w-4 h-4" />
-                </button>
               </div>
             </div>
 
-            {/* Traditional Uses */}
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-2">
-                Traditional Uses
+                Common Names
               </label>
               <div className="space-y-2">
-                {traditionalUses.map((use, index) => (
+                {commonNames.map((name, index) => (
                   <div key={index} className="flex gap-2">
                     <input
                       type="text"
-                      value={use}
-                      onChange={(e) => updateTraditionalUse(index, e.target.value)}
-                      placeholder={`Traditional use ${index + 1}...`}
+                      value={name}
+                      onChange={(e) => updateArrayItem(commonNames, setCommonNames, index, e.target.value)}
+                      placeholder={`Common name ${index + 1}...`}
                       className="input-mystical flex-1"
                     />
-                    {traditionalUses.length > 1 && (
+                    {commonNames.length > 1 && (
                       <button
                         type="button"
-                        onClick={() => removeTraditionalUse(index)}
+                        onClick={() => removeArrayItem(commonNames, setCommonNames, index)}
                         className="p-2 text-gray-400 hover:text-red-400 transition-colors"
                       >
                         <X className="w-5 h-5" />
@@ -292,11 +289,190 @@ export default function NewCorrespondencePage() {
                 ))}
                 <button
                   type="button"
-                  onClick={addTraditionalUse}
+                  onClick={() => addArrayItem(commonNames, setCommonNames)}
                   className="text-purple-400 hover:text-purple-300 text-sm flex items-center gap-1"
                 >
                   <Plus className="w-4 h-4" />
-                  Add another use
+                  Add another name
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Magical Properties */}
+        <div className="card-mystical">
+          <h3 className="text-lg font-semibold mb-4">Magical Properties *</h3>
+          
+          {/* Selected Properties */}
+          <div className="flex flex-wrap gap-2 mb-4">
+            {selectedProperties.map(property => (
+              <span
+                key={property}
+                className={`inline-flex items-center px-3 py-1 rounded-full text-sm ${getPropertyColor(property)}`}
+              >
+                <Sparkles className="w-3 h-3 mr-1" />
+                {property.replace('_', ' ')}
+                <button
+                  type="button"
+                  onClick={() => setSelectedProperties(selectedProperties.filter(p => p !== property))}
+                  className="ml-2 hover:text-white transition-colors"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </span>
+            ))}
+          </div>
+
+          {/* Available Properties */}
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 mb-4">
+            {MAGICAL_PROPERTIES.map(property => (
+              <button
+                key={property}
+                type="button"
+                onClick={() => toggleProperty(property)}
+                className={`text-left px-3 py-2 rounded-lg text-sm transition-all ${
+                  selectedProperties.includes(property)
+                    ? 'bg-purple-600/20 border border-purple-500/50 text-purple-300'
+                    : 'bg-gray-800 hover:bg-gray-700 text-gray-300'
+                }`}
+              >
+                {property.replace('_', ' ')}
+              </button>
+            ))}
+          </div>
+
+          {/* Add Custom Property */}
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={newProperty}
+              onChange={(e) => setNewProperty(e.target.value)}
+              placeholder="Add custom property..."
+              className="input-mystical flex-1"
+              onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addCustomProperty())}
+            />
+            <button
+              type="button"
+              onClick={addCustomProperty}
+              className="btn-mystical px-4"
+            >
+              <Plus className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+
+        {/* Applications and Uses */}
+        <div className="card-mystical">
+          <h3 className="text-lg font-semibold mb-4">Applications & Uses</h3>
+          <div className="space-y-6">
+            {/* Traditional Uses */}
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Traditional Magical Uses
+              </label>
+              <div className="space-y-2">
+                {traditionalUses.map((use, index) => (
+                  <div key={index} className="flex gap-2">
+                    <input
+                      type="text"
+                      value={use}
+                      onChange={(e) => updateArrayItem(traditionalUses, setTraditionalUses, index, e.target.value)}
+                      placeholder={`Traditional use ${index + 1}...`}
+                      className="input-mystical flex-1"
+                    />
+                    {traditionalUses.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => removeArrayItem(traditionalUses, setTraditionalUses, index)}
+                        className="p-2 text-gray-400 hover:text-red-400 transition-colors"
+                      >
+                        <X className="w-5 h-5" />
+                      </button>
+                    )}
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => addArrayItem(traditionalUses, setTraditionalUses)}
+                  className="text-purple-400 hover:text-purple-300 text-sm flex items-center gap-1"
+                >
+                  <Plus className="w-4 h-4" />
+                  Add traditional use
+                </button>
+              </div>
+            </div>
+
+            {/* Medical Uses */}
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Medical & Healing Uses
+              </label>
+              <div className="space-y-2">
+                {medicalUses.map((use, index) => (
+                  <div key={index} className="flex gap-2">
+                    <input
+                      type="text"
+                      value={use}
+                      onChange={(e) => updateArrayItem(medicalUses, setMedicalUses, index, e.target.value)}
+                      placeholder={`Medical use ${index + 1}...`}
+                      className="input-mystical flex-1"
+                    />
+                    {medicalUses.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => removeArrayItem(medicalUses, setMedicalUses, index)}
+                        className="p-2 text-gray-400 hover:text-red-400 transition-colors"
+                      >
+                        <X className="w-5 h-5" />
+                      </button>
+                    )}
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => addArrayItem(medicalUses, setMedicalUses)}
+                  className="text-purple-400 hover:text-purple-300 text-sm flex items-center gap-1"
+                >
+                  <Plus className="w-4 h-4" />
+                  Add medical use
+                </button>
+              </div>
+            </div>
+
+            {/* Personal Applications */}
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Personal Applications
+              </label>
+              <div className="space-y-2">
+                {personalApplications.map((app, index) => (
+                  <div key={index} className="flex gap-2">
+                    <input
+                      type="text"
+                      value={app}
+                      onChange={(e) => updateArrayItem(personalApplications, setPersonalApplications, index, e.target.value)}
+                      placeholder={`Personal application ${index + 1}...`}
+                      className="input-mystical flex-1"
+                    />
+                    {personalApplications.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => removeArrayItem(personalApplications, setPersonalApplications, index)}
+                        className="p-2 text-gray-400 hover:text-red-400 transition-colors"
+                      >
+                        <X className="w-5 h-5" />
+                      </button>
+                    )}
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => addArrayItem(personalApplications, setPersonalApplications)}
+                  className="text-purple-400 hover:text-purple-300 text-sm flex items-center gap-1"
+                >
+                  <Plus className="w-4 h-4" />
+                  Add personal application
                 </button>
               </div>
             </div>
@@ -309,21 +485,19 @@ export default function NewCorrespondencePage() {
               <textarea
                 value={personalNotes}
                 onChange={(e) => setPersonalNotes(e.target.value)}
-                placeholder="Share your personal experiences, observations, or unique ways you use this correspondence..."
+                placeholder="Share your personal experiences, observations, or unique insights..."
                 className="input-mystical w-full min-h-[120px] resize-none"
               />
             </div>
           </div>
         </div>
 
-        {/* Additional Correspondences */}
+        {/* Elemental & Planetary Correspondences */}
         <div className="card-mystical">
-          <h3 className="text-lg font-semibold mb-4">Additional Correspondences</h3>
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <h3 className="text-lg font-semibold mb-4">Elemental & Planetary Correspondences</h3>
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                Element
-              </label>
+              <label className="block text-sm font-medium text-gray-300 mb-2">Element</label>
               <select
                 value={element}
                 onChange={(e) => setElement(e.target.value)}
@@ -337,9 +511,7 @@ export default function NewCorrespondencePage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                Planet
-              </label>
+              <label className="block text-sm font-medium text-gray-300 mb-2">Planet</label>
               <select
                 value={planet}
                 onChange={(e) => setPlanet(e.target.value)}
@@ -353,22 +525,21 @@ export default function NewCorrespondencePage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                Zodiac Sign
-              </label>
-              <input
-                type="text"
+              <label className="block text-sm font-medium text-gray-300 mb-2">Zodiac Sign</label>
+              <select
                 value={zodiacSign}
                 onChange={(e) => setZodiacSign(e.target.value)}
-                placeholder="e.g., Leo, Scorpio..."
                 className="input-mystical w-full"
-              />
+              >
+                <option value="">Select zodiac sign</option>
+                {ZODIAC_SIGNS.map(sign => (
+                  <option key={sign} value={sign}>{sign}</option>
+                ))}
+              </select>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                Chakra
-              </label>
+              <label className="block text-sm font-medium text-gray-300 mb-2">Chakra</label>
               <select
                 value={chakra}
                 onChange={(e) => setChakra(e.target.value)}
@@ -380,6 +551,113 @@ export default function NewCorrespondencePage() {
                 ))}
               </select>
             </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">Energy Type</label>
+              <select
+                value={energyType}
+                onChange={(e) => setEnergyType(e.target.value)}
+                className="input-mystical w-full"
+              >
+                <option value="">Select energy type</option>
+                {ENERGY_TYPES.map(type => (
+                  <option key={type} value={type}>{type.charAt(0).toUpperCase() + type.slice(1)}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+        </div>
+
+        {/* Spiritual & Cultural */}
+        <div className="card-mystical">
+          <h3 className="text-lg font-semibold mb-4">Spiritual & Cultural Information</h3>
+          <div className="space-y-4">
+            {/* Deities */}
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Associated Deities
+              </label>
+              <div className="space-y-2">
+                {deities.map((deity, index) => (
+                  <div key={index} className="flex gap-2">
+                    <input
+                      type="text"
+                      value={deity}
+                      onChange={(e) => updateArrayItem(deities, setDeities, index, e.target.value)}
+                      placeholder={`Deity ${index + 1}...`}
+                      className="input-mystical flex-1"
+                    />
+                    {deities.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => removeArrayItem(deities, setDeities, index)}
+                        className="p-2 text-gray-400 hover:text-red-400 transition-colors"
+                      >
+                        <X className="w-5 h-5" />
+                      </button>
+                    )}
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => addArrayItem(deities, setDeities)}
+                  className="text-purple-400 hover:text-purple-300 text-sm flex items-center gap-1"
+                >
+                  <Plus className="w-4 h-4" />
+                  Add deity
+                </button>
+              </div>
+            </div>
+
+            {/* Folklore */}
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Folklore, Legends & Lore
+              </label>
+              <textarea
+                value={folklore}
+                onChange={(e) => setFolklore(e.target.value)}
+                placeholder="Share the myths, legends, stories, and traditional lore associated with this correspondence..."
+                className="input-mystical w-full min-h-[120px] resize-none"
+              />
+            </div>
+
+            {/* Historical Uses */}
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Historical Uses
+              </label>
+              <div className="space-y-2">
+                {historicalUses.map((use, index) => (
+                  <div key={index} className="flex gap-2">
+                    <input
+                      type="text"
+                      value={use}
+                      onChange={(e) => updateArrayItem(historicalUses, setHistoricalUses, index, e.target.value)}
+                      placeholder={`Historical use ${index + 1}...`}
+                      className="input-mystical flex-1"
+                    />
+                    {historicalUses.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => removeArrayItem(historicalUses, setHistoricalUses, index)}
+                        className="p-2 text-gray-400 hover:text-red-400 transition-colors"
+                      >
+                        <X className="w-5 h-5" />
+                      </button>
+                    )}
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => addArrayItem(historicalUses, setHistoricalUses)}
+                  className="text-purple-400 hover:text-purple-300 text-sm flex items-center gap-1"
+                >
+                  <Plus className="w-4 h-4" />
+                  Add historical use
+                </button>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -390,10 +668,10 @@ export default function NewCorrespondencePage() {
             <div className="text-sm text-gray-300">
               <p className="font-medium mb-2">Building Your Correspondence Library:</p>
               <ul className="space-y-1 text-gray-400 text-xs">
-                <li>• Include both traditional knowledge and personal experiences</li>
-                <li>• Add entries as you discover new correspondences in practice</li>
-                <li>• Your personal correspondences will be marked distinctly from traditional ones</li>
-                <li>• Use the search and filter features to quickly find what you need during rituals</li>
+                <li>• Fill in as much or as little detail as you know - you can always edit later</li>
+                <li>• Traditional, medical, and personal uses help track different applications</li>
+                <li>• Include folklore and legends to preserve the spiritual wisdom</li>
+                <li>• Use the search features to quickly find correspondences during rituals</li>
               </ul>
             </div>
           </div>

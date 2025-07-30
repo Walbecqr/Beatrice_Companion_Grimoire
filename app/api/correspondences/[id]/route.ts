@@ -1,3 +1,4 @@
+// app/api/correspondences/[id]/route.ts
 import { NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase/server'
 
@@ -53,13 +54,23 @@ export async function PUT(
     const {
       name,
       category,
+      description,
+      botanical_name,
+      common_names,
       magical_properties,
       traditional_uses,
+      medical_uses,
+      personal_applications,
       personal_notes,
       element,
       planet,
       zodiac_sign,
       chakra,
+      energy_type,
+      deities,
+      cultural_traditions,
+      folklore,
+      historical_uses,
       is_favorited
     } = body
 
@@ -96,12 +107,22 @@ export async function PUT(
     if (canFullEdit) {
       if (name !== undefined) updateData.name = name.trim()
       if (category !== undefined) updateData.category = category.toLowerCase()
+      if (description !== undefined) updateData.description = description?.trim() || null
+      if (botanical_name !== undefined) updateData.botanical_name = botanical_name?.trim() || null
+      if (common_names !== undefined) updateData.common_names = Array.isArray(common_names) ? common_names.filter(n => n.trim()) : []
       if (magical_properties !== undefined) updateData.magical_properties = Array.isArray(magical_properties) ? magical_properties : []
-      if (traditional_uses !== undefined) updateData.traditional_uses = Array.isArray(traditional_uses) ? traditional_uses : []
+      if (traditional_uses !== undefined) updateData.traditional_uses = Array.isArray(traditional_uses) ? traditional_uses.filter(u => u.trim()) : []
+      if (medical_uses !== undefined) updateData.medical_uses = Array.isArray(medical_uses) ? medical_uses.filter(u => u.trim()) : []
+      if (personal_applications !== undefined) updateData.personal_applications = Array.isArray(personal_applications) ? personal_applications.filter(a => a.trim()) : []
       if (element !== undefined) updateData.element = element?.trim() || null
       if (planet !== undefined) updateData.planet = planet?.trim() || null
       if (zodiac_sign !== undefined) updateData.zodiac_sign = zodiac_sign?.trim() || null
       if (chakra !== undefined) updateData.chakra = chakra?.trim() || null
+      if (energy_type !== undefined) updateData.energy_type = energy_type || null
+      if (deities !== undefined) updateData.deities = Array.isArray(deities) ? deities.filter(d => d.trim()) : []
+      if (cultural_traditions !== undefined) updateData.cultural_traditions = cultural_traditions || null
+      if (folklore !== undefined) updateData.folklore = folklore?.trim() || null
+      if (historical_uses !== undefined) updateData.historical_uses = Array.isArray(historical_uses) ? historical_uses.filter(h => h.trim()) : []
     }
 
     // Allow personal notes updates for any correspondence the user has access to
