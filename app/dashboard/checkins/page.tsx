@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Calendar, Sparkles, CheckCircle, Circle, TrendingUp } from 'lucide-react'
 import { format, subDays, startOfMonth, endOfMonth } from 'date-fns'
@@ -20,11 +20,7 @@ export default function CheckinsPage() {
   const [streak, setStreak] = useState(0)
   const supabase = createClient()
 
-  useEffect(() => {
-    fetchCheckins()
-  }, [])
-
-  const fetchCheckins = async () => {
+  const fetchCheckins = useCallback(async () => {
     try {
       const { data, error } = await supabase
         .from('daily_checkins')
@@ -41,7 +37,11 @@ export default function CheckinsPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
+
+  useEffect(() => {
+    fetchCheckins()
+  }, [fetchCheckins])
 
   const calculateStreak = (checkinData: DailyCheckin[]) => {
     let currentStreak = 0
@@ -169,7 +169,7 @@ export default function CheckinsPage() {
                         {format(new Date(checkin.created_at), 'EEEE, MMMM d')}
                       </span>
                     </div>
-                    <p className="text-gray-300 italic mb-2">"{checkin.prompt}"</p>
+                    <p className="text-gray-300 italic mb-2">&ldquo;{checkin.prompt}&rdquo;</p>
                     {checkin.response && (
                       <p className="text-sm text-gray-400 line-clamp-2">{checkin.response}</p>
                     )}
@@ -205,8 +205,8 @@ export default function CheckinsPage() {
             
             <div className="space-y-4">
               <div>
-                <p className="text-sm text-gray-400 mb-1">Beatrice's Prompt:</p>
-                <p className="text-gray-300 italic">"{selectedCheckin.prompt}"</p>
+                <p className="text-sm text-gray-400 mb-1">Beatrice&apos;s Prompt:</p>
+                <p className="text-gray-300 italic">&ldquo;{selectedCheckin.prompt}&rdquo;</p>
               </div>
               
               {selectedCheckin.response && (

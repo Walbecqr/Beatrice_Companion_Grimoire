@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
@@ -83,12 +83,7 @@ export default function CorrespondenceDetailPage({ params }: { params: { id: str
   const router = useRouter()
   const supabase = createClient()
 
-  useEffect(() => {
-    fetchCorrespondence()
-    fetchRelatedEntries()
-  }, [params.id])
-
-  const fetchCorrespondence = async () => {
+  const fetchCorrespondence = useCallback(async () => {
     try {
       const { data, error } = await supabase
         .from('correspondences')
@@ -115,9 +110,9 @@ export default function CorrespondenceDetailPage({ params }: { params: { id: str
     } finally {
       setLoading(false)
     }
-  }
+  }, [params.id, supabase, router])
 
-  const fetchRelatedEntries = async () => {
+  const fetchRelatedEntries = useCallback(async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
@@ -148,7 +143,7 @@ export default function CorrespondenceDetailPage({ params }: { params: { id: str
     } catch (error) {
       console.error('Error fetching related entries:', error)
     }
-  }
+  }, [correspondence?.name, supabase])
 
   const toggleFavorite = async () => {
     if (!correspondence) return
@@ -651,7 +646,7 @@ export default function CorrespondenceDetailPage({ params }: { params: { id: str
             <div className={correspondence.personal_notes ? 'bg-purple-900/10 p-4 rounded-lg' : ''}>
               {correspondence.personal_notes ? (
                 <p className="text-gray-300 whitespace-pre-wrap italic">
-                  "{correspondence.personal_notes}"
+                  &ldquo;{correspondence.personal_notes}&rdquo;
                 </p>
               ) : (
                 <p className="text-gray-500 italic">

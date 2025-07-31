@@ -1,11 +1,11 @@
 // app/dashboard/chat/history/page.tsx
 'use client'
 
-import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import Link from 'next/link'
 import { format, formatDistanceToNow } from 'date-fns'
-import { MessageCircle, Trash2, Search, Calendar, Moon, Eye, MoreVertical } from 'lucide-react'
+import { Calendar, Eye, MessageCircle, Moon, Search, Trash2 } from 'lucide-react'
+import Link from 'next/link'
+import { useEffect, useState } from 'react'
 import ChatNavigation from '../components/chat-navigation'
 
 interface ChatSession {
@@ -58,8 +58,7 @@ export default function ChatHistoryPage() {
       const processedSessions: ChatSession[] = sessionsData.map(session => {
         const messages = session.chat_messages || []
         const userMessages = messages.filter(m => m.role === 'user')
-        const assistantMessages = messages.filter(m => m.role === 'assistant')
-        
+
         return {
           id: session.id,
           title: session.title || (userMessages.length > 0 ? userMessages[0].content : 'New Conversation'),
@@ -85,7 +84,7 @@ export default function ChatHistoryPage() {
       return
     }
 
-    const filtered = sessions.filter(session => 
+    const filtered = sessions.filter(session =>
       session.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       session.first_message?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       session.last_message?.toLowerCase().includes(searchTerm.toLowerCase())
@@ -131,7 +130,7 @@ export default function ChatHistoryPage() {
 
   const deleteSelectedSessions = async () => {
     if (selectedSessions.size === 0) return
-    
+
     if (!confirm(`Are you sure you want to delete ${selectedSessions.size} conversation(s)? This action cannot be undone.`)) {
       return
     }
@@ -216,7 +215,7 @@ export default function ChatHistoryPage() {
               {searchTerm ? 'No conversations found' : 'No conversations yet'}
             </h3>
             <p className="text-gray-500 mb-4">
-              {searchTerm 
+              {searchTerm
                 ? 'Try adjusting your search terms'
                 : 'Start your first conversation with Beatrice to begin your spiritual journey'
               }
@@ -229,8 +228,8 @@ export default function ChatHistoryPage() {
           </div>
         ) : (
           filteredSessions.map((session) => (
-            <div 
-              key={session.id} 
+            <div
+              key={session.id}
               className="card-mystical p-4 hover:bg-gray-800/50 transition-colors"
             >
               <div className="flex items-start space-x-4">
@@ -264,7 +263,7 @@ export default function ChatHistoryPage() {
                           Updated {formatDistanceToNow(new Date(session.updated_at), { addSuffix: true })}
                         </span>
                       </div>
-                      
+
                       {/* First Message Preview */}
                       {session.first_message && (
                         <p className="text-sm text-gray-500 mt-2 line-clamp-2">
@@ -282,7 +281,7 @@ export default function ChatHistoryPage() {
                       >
                         <Eye className="w-4 h-4" />
                       </Link>
-                      
+
                       <button
                         onClick={() => deleteSession(session.id)}
                         className="p-2 text-gray-400 hover:text-red-400 transition-colors"

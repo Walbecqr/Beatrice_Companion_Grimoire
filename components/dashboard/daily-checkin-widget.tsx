@@ -8,7 +8,7 @@ import Link from 'next/link'
 interface DailyCheckin {
   id: string
   prompt: string
-  response: string | null
+  response: string | null | undefined
   completed: boolean
   created_at: string
 }
@@ -18,7 +18,6 @@ export function DailyCheckinWidget() {
   const [loading, setLoading] = useState(true)
   const [quickResponse, setQuickResponse] = useState('')
   const [saving, setSaving] = useState(false)
-  const supabase = createClient()
 
   useEffect(() => {
     fetchTodaysCheckin()
@@ -97,7 +96,7 @@ export function DailyCheckinWidget() {
       </div>
 
       <div className="space-y-4">
-        <p className="text-gray-300 italic">"{checkin.prompt}"</p>
+        <p className="text-gray-300 italic">{checkin.prompt}</p>
 
         {checkin.completed ? (
           <div className="bg-gray-800/50 rounded-lg p-3">

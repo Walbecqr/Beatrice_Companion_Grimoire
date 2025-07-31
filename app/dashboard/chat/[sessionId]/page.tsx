@@ -9,6 +9,7 @@ import { ArrowLeft, Play, Trash2, Calendar, MessageCircle } from 'lucide-react'
 import Link from 'next/link'
 import ChatInterface from '../components/chat-interface'
 import ChatNavigation from '../components/chat-navigation'
+import { useCallback } from 'react';
 
 interface Message {
   role: 'user' | 'assistant'
@@ -34,13 +35,7 @@ export default function ChatSessionPage() {
   const supabase = createClient()
   const sessionId = params.sessionId as string
 
-  useEffect(() => {
-    if (sessionId) {
-      fetchSession()
-    }
-  }, [sessionId])
-
-  const fetchSession = async () => {
+  const fetchSession = useCallback(async () => {
     try {
       // Fetch session details
       const { data: sessionData, error: sessionError } = await supabase
@@ -79,7 +74,13 @@ export default function ChatSessionPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [sessionId])
+
+  useEffect(() => {
+    if (sessionId) {
+      fetchSession()
+    }
+  }, [sessionId, fetchSession])
 
   const deleteSession = async () => {
     if (!confirm('Are you sure you want to delete this conversation? This action cannot be undone.')) {
@@ -129,7 +130,7 @@ export default function ChatSessionPage() {
             Conversation Not Found
           </h3>
           <p className="text-gray-500 mb-4">
-            This conversation may have been deleted or you don't have access to it.
+            This conversation may have been deleted or you don&apos;t have access to it.
           </p>
           <Link href="/dashboard/chat/history" className="btn-mystical">
             Back to History
@@ -210,7 +211,7 @@ export default function ChatSessionPage() {
       <div className="card-mystical p-4">
         <div className="flex items-center justify-between">
           <div className="text-sm text-gray-400">
-            This is a view-only mode. To continue this conversation, click the "Continue" button above.
+            This is a view-only mode. To continue this conversation, click the &quot;Continue&quot; button above.
           </div>
           
           <div className="flex items-center space-x-3">
