@@ -1,12 +1,12 @@
 // app/dashboard/chat/continue/[sessionId]/page.tsx
 'use client'
 
-import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { useParams, useRouter } from 'next/navigation'
 import { format } from 'date-fns'
 import { ArrowLeft, Calendar, MessageCircle } from 'lucide-react'
 import Link from 'next/link'
+import { useParams, useRouter } from 'next/navigation'
+import { useCallback, useEffect, useState } from 'react'
 import ChatInterface from '../../components/chat-interface'
 import ChatNavigation from '../../components/chat-navigation'
 
@@ -33,13 +33,7 @@ export default function ContinueConversationPage() {
   const supabase = createClient()
   const sessionId = params.sessionId as string
 
-  useEffect(() => {
-    if (sessionId) {
-      fetchSession()
-    }
-  }, [sessionId])
-
-  const fetchSession = async () => {
+  const fetchSession = useCallback(async () => {
     try {
       // Fetch session details
       const { data: sessionData, error: sessionError } = await supabase
@@ -82,7 +76,13 @@ export default function ContinueConversationPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [sessionId, supabase, router])
+
+  useEffect(() => {
+    if (sessionId) {
+      fetchSession()
+    }
+  }, [sessionId, fetchSession])
 
   if (loading) {
     return (
@@ -107,7 +107,7 @@ export default function ContinueConversationPage() {
             Conversation Not Found
           </h3>
           <p className="text-gray-500 mb-4">
-            This conversation may have been deleted or you don't have access to it.
+            This conversation may have been deleted or you don&apos;t have access to it.
           </p>
           <Link href="/dashboard/chat/history" className="btn-mystical">
             Back to History
@@ -176,7 +176,7 @@ export default function ContinueConversationPage() {
       <div className="card-mystical p-4">
         <div className="flex items-center justify-between text-sm">
           <div className="text-gray-400">
-            You're continuing a previous conversation. Your new messages will be added to this session.
+            You&apos;re continuing a previous conversation. Your new messages will be added to this session.
           </div>
           
           <div className="flex items-center space-x-3">
