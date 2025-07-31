@@ -4,8 +4,8 @@
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useSearchParams } from 'next/navigation'
-import ChatInterface from './components/chat-interface'
-import ChatNavigation from './components/chat-navigation'
+import ChatInterface from './components/chat-interface.tsx'
+import ChatNavigation from './components/chat-navigation.tsx'
 
 interface Message {
   role: 'user' | 'assistant'
