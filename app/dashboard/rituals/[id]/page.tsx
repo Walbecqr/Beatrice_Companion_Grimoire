@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft, Edit2, Save, Trash2, Moon, Calendar, Sparkles, Hash, Clock, CheckCircle } from 'lucide-react'
 import { format } from 'date-fns'
+import { formatDetailDate } from '@/lib/utils/date-utils'
 
 interface Ritual {
   id: string
@@ -311,7 +312,7 @@ export default function RitualEntryPage({ params }: { params: { id: string } }) 
             {ritual.updated_at !== ritual.created_at && (
               <div>
                 <span className="text-gray-500">Last updated:</span>
-                <p className="text-gray-300">{format(new Date(ritual.updated_at), 'PPp')}</p>
+                <p className="text-gray-300">{formatDetailDate(ritual.updated_at)}</p>
               </div>
             )}
           </div>
