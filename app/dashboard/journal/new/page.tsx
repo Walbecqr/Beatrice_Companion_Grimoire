@@ -186,7 +186,7 @@ export default function NewJournalPage() {
               <p className="font-medium mb-2">Reflection Prompts:</p>
               <ul className="space-y-1 text-gray-400">
                 <li key="prompt-1">• What synchronicities did you notice today?</li>
-                <li key="prompt-2">• How did the moon's energy affect you?</li>
+                <li key="prompt-2">• How did the moon&apos;s energy affect you?</li>
                 <li key="prompt-3">• What messages did your intuition share?</li>
                 <li key="prompt-4">• What are you grateful for in this moment?</li>
               </ul>
