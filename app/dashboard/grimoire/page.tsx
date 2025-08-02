@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { Plus, Search, BookOpen, Sparkles, Scroll, Heart, Shield, Star, DollarSign, Filter } from 'lucide-react'
+import { Plus, Search, BookOpen, Sparkles, Scroll, Heart, Shield, Star, Brain, Filter, Crystal } from 'lucide-react'
 import Link from 'next/link'
 
 // ✅ FIXED: Updated interface to match actual database schema
@@ -11,17 +11,17 @@ interface GrimoireEntry {
   user_id: string
   title: string
   type: string
-  category: string
+  category: string | null
   subcategory: string | null
   content: string | null
   description: string | null
   purpose: string | null
   intent: string | null
   ingredients: string[] | null
-  instructions: string | null
+  instructions: string
   notes: string | null
   source: string | null
-  best_timing: string | null  // ✅ FIXED: was "timing"
+  best_timing: string | null
   difficulty_level: number | null
   moon_phase: string | null
   moon_phase_compatibility: string[] | null
@@ -38,14 +38,23 @@ interface GrimoireEntry {
   updated_at: string
 }
 
+// ✅ FIXED: Updated CATEGORY_CONFIG to match database CHECK constraint exactly
 const CATEGORY_CONFIG = {
   spell: { icon: Sparkles, color: 'text-purple-400', bg: 'bg-purple-900/20' },
   ritual: { icon: Star, color: 'text-blue-400', bg: 'bg-blue-900/20' },
   chant: { icon: Scroll, color: 'text-green-400', bg: 'bg-green-900/20' },
   blessing: { icon: Heart, color: 'text-pink-400', bg: 'bg-pink-900/20' },
-  invocation: { icon: BookOpen, color: 'text-indigo-400', bg: 'bg-indigo-900/20' },
-  recipe: { icon: DollarSign, color: 'text-yellow-400', bg: 'bg-yellow-900/20' },
-  other: { icon: Scroll, color: 'text-gray-400', bg: 'bg-gray-900/20' },
+  invocation: { icon: Shield, color: 'text-indigo-400', bg: 'bg-indigo-900/20' },
+  meditation: { icon: Brain, color: 'text-cyan-400', bg: 'bg-cyan-900/20' },
+  divination: { icon: Crystal, color: 'text-amber-400', bg: 'bg-amber-900/20' },
+  other: { icon: BookOpen, color: 'text-gray-400', bg: 'bg-gray-900/20' },
+}
+
+// ✅ ADDED: Fallback config for unknown types
+const FALLBACK_CONFIG = { 
+  icon: BookOpen, 
+  color: 'text-gray-400', 
+  bg: 'bg-gray-900/20' 
 }
 
 const SUBCATEGORIES = [
@@ -54,7 +63,6 @@ const SUBCATEGORIES = [
 ]
 
 export default function GrimoirePage() {
-  // ✅ FIXED: Initialize as empty array to prevent .filter() errors
   const [entries, setEntries] = useState<GrimoireEntry[]>([])
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedCategory, setSelectedCategory] = useState<string>('')
@@ -68,36 +76,33 @@ export default function GrimoirePage() {
     fetchEntries()
   }, [])
 
-  // ✅ FIXED: Added comprehensive error handling
   const fetchEntries = async () => {
     try {
       setError(null)
       const { data, error: fetchError } = await supabase
         .from('grimoire_entries')
         .select('*')
-        .order('category', { ascending: true })
+        .order('type', { ascending: true })
         .order('title', { ascending: true })
 
       if (fetchError) {
         console.error('Grimoire entries fetch error:', fetchError)
         setError(fetchError.message)
-        setEntries([]) // ✅ Set empty array on error
+        setEntries([])
         return
       }
 
-      // ✅ FIXED: Ensure data is always an array
       setEntries(Array.isArray(data) ? data : [])
       
     } catch (error: any) {
       console.error('Error fetching grimoire entries:', error)
       setError(error.message || 'Failed to load grimoire entries')
-      setEntries([]) // ✅ Set empty array on exception
+      setEntries([])
     } finally {
       setLoading(false)
     }
   }
 
-  // ✅ FIXED: Safe filtering with array check
   const filteredEntries = Array.isArray(entries) 
     ? entries.filter(entry => {
         const searchLower = searchTerm.toLowerCase()
@@ -105,25 +110,25 @@ export default function GrimoirePage() {
           entry.title?.toLowerCase().includes(searchLower) ||
           entry.purpose?.toLowerCase().includes(searchLower) ||
           entry.description?.toLowerCase().includes(searchLower) ||
-          entry.subcategory?.toLowerCase().includes(searchLower)
+          entry.instructions?.toLowerCase().includes(searchLower) ||
+          entry.category?.toLowerCase().includes(searchLower)
 
-        const matchesCategory = !selectedCategory || entry.category === selectedCategory
-        const matchesSubcategory = !selectedSubcategory || entry.subcategory === selectedSubcategory
+        const matchesCategory = !selectedCategory || entry.type === selectedCategory
+        const matchesSubcategory = !selectedSubcategory || entry.category?.toLowerCase() === selectedSubcategory.toLowerCase()
 
         return matchesSearch && matchesCategory && matchesSubcategory
       })
-    : [] // ✅ Return empty array if entries is not an array
+    : []
 
-  // ✅ FIXED: Safe reduce with array check
+  // ✅ FIXED: Use 'type' field for grouping (not 'category')
   const groupedEntries = Array.isArray(filteredEntries)
     ? filteredEntries.reduce((acc, entry) => {
-        if (!acc[entry.category]) acc[entry.category] = []
-        acc[entry.category].push(entry)
+        if (!acc[entry.type]) acc[entry.type] = []
+        acc[entry.type].push(entry)
         return acc
       }, {} as Record<string, GrimoireEntry[]>)
-    : {} // ✅ Return empty object if filteredEntries is not an array
+    : {}
 
-  // ✅ FIXED: Use is_tested instead of non-existent times_used
   const testedCount = Array.isArray(entries) 
     ? entries.filter(entry => entry.is_tested).length 
     : 0
@@ -175,20 +180,17 @@ export default function GrimoirePage() {
         </div>
         <div className="card-mystical text-center">
           <p className="text-2xl font-bold text-blue-300">
-            {/* ✅ FIXED: Safe filtering for stats */}
-            {Array.isArray(entries) ? entries.filter(e => e.category === 'spell').length : 0}
+            {Array.isArray(entries) ? entries.filter(e => e.type === 'spell').length : 0}
           </p>
           <p className="text-sm text-gray-400">Spells</p>
         </div>
         <div className="card-mystical text-center">
           <p className="text-2xl font-bold text-green-300">
-            {/* ✅ FIXED: Safe filtering for stats */}
-            {Array.isArray(entries) ? entries.filter(e => e.category === 'ritual').length : 0}
+            {Array.isArray(entries) ? entries.filter(e => e.type === 'ritual').length : 0}
           </p>
           <p className="text-sm text-gray-400">Rituals</p>
         </div>
         <div className="card-mystical text-center">
-          {/* ✅ FIXED: Use is_tested count instead of times_used */}
           <p className="text-2xl font-bold text-pink-300">{testedCount}</p>
           <p className="text-sm text-gray-400">Tested</p>
         </div>
@@ -224,7 +226,7 @@ export default function GrimoirePage() {
         {showFilters && (
           <div className="card-mystical space-y-4">
             <div>
-              <label className="text-sm font-medium text-gray-400 mb-2 block">Category</label>
+              <label className="text-sm font-medium text-gray-400 mb-2 block">Type</label>
               <div className="flex flex-wrap gap-2">
                 <button
                   onClick={() => setSelectedCategory('')}
@@ -254,7 +256,7 @@ export default function GrimoirePage() {
             </div>
 
             <div>
-              <label className="text-sm font-medium text-gray-400 mb-2 block">Subcategory</label>
+              <label className="text-sm font-medium text-gray-400 mb-2 block">Category</label>
               <div className="flex flex-wrap gap-2">
                 <button
                   onClick={() => setSelectedSubcategory('')}
@@ -285,7 +287,7 @@ export default function GrimoirePage() {
         )}
       </div>
 
-      {/* Entries by Category */}
+      {/* Entries by Type */}
       {Object.keys(groupedEntries).length === 0 ? (
         <div className="card-mystical text-center py-12">
           <BookOpen className="w-12 h-12 text-purple-400 mx-auto mb-4" />
@@ -302,21 +304,22 @@ export default function GrimoirePage() {
         </div>
       ) : (
         <div className="space-y-8">
-          {Object.entries(groupedEntries).map(([category, categoryEntries]) => {
-            const config = CATEGORY_CONFIG[category as keyof typeof CATEGORY_CONFIG]
+          {Object.entries(groupedEntries).map(([type, typeEntries]) => {
+            // ✅ FIXED: Safe config access with fallback
+            const config = CATEGORY_CONFIG[type as keyof typeof CATEGORY_CONFIG] || FALLBACK_CONFIG
             const Icon = config.icon
             
             return (
-              <div key={category}>
+              <div key={type}>
                 <div className="flex items-center space-x-2 mb-4">
                   <Icon className={`w-5 h-5 ${config.color}`} />
                   <h2 className="text-lg font-semibold capitalize">
-                    {category}s ({categoryEntries.length})
+                    {type}s ({typeEntries.length})
                   </h2>
                 </div>
                 
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                  {categoryEntries.map((entry) => (
+                  {typeEntries.map((entry) => (
                     <Link
                       key={entry.id}
                       href={`/dashboard/grimoire/${entry.id}`}
@@ -329,9 +332,9 @@ export default function GrimoirePage() {
                         <Icon className={`w-5 h-5 ${config.color} flex-shrink-0 ml-2`} />
                       </div>
                       
-                      {entry.subcategory && (
+                      {entry.category && (
                         <p className="text-sm text-gray-400 mb-2 capitalize">
-                          {entry.subcategory}
+                          {entry.category}
                         </p>
                       )}
                       
@@ -343,16 +346,13 @@ export default function GrimoirePage() {
                       
                       <div className="flex items-center justify-between text-xs text-gray-500">
                         <div className="flex items-center space-x-3">
-                          {/* ✅ FIXED: Use best_timing instead of timing */}
                           {entry.best_timing && (
                             <span>{entry.best_timing}</span>
                           )}
-                          {/* ✅ FIXED: Use ingredients instead of tools */}
                           {entry.ingredients && entry.ingredients.length > 0 && (
                             <span>{entry.ingredients.length} ingredients</span>
                           )}
                         </div>
-                        {/* ✅ FIXED: Use is_tested instead of times_used */}
                         {entry.is_tested && (
                           <span className="text-green-400">
                             Tested ✓
