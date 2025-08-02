@@ -45,7 +45,7 @@ export default function NewRitualPage() {
   const [title, setTitle] = useState('')
   const [intent, setIntent] = useState('')
   const [description, setDescription] = useState('')
-  const [toolsUsed, setToolsUsed] = useState<string[]>([])
+  const [ingredientsUsed, setIngredientsUsed] = useState<string[]>([])
   const [newTool, setNewTool] = useState('')
   const [outcome, setOutcome] = useState('')
   const [performedAt, setPerformedAt] = useState(
@@ -64,25 +64,25 @@ export default function NewRitualPage() {
     const template = RITUAL_TEMPLATES[templateKey]
     setSelectedTemplate(templateKey)
     setTitle(template.title)
-    setToolsUsed(template.tools)
+    setIngredientsUsed(template.ingredients)
   }
 
   const addTool = (tool: string) => {
-    if (tool && !toolsUsed.includes(tool)) {
-      setToolsUsed([...toolsUsed, tool])
+    if (tool && !ingredientsUsed.includes(tool)) {
+      setIngredientsUsed([...ingredientsUsed, tool])
       setNewTool('')
       setShowToolSuggestions(false)
     }
   }
 
   const removeTool = (tool: string) => {
-    setToolsUsed(toolsUsed.filter(t => t !== tool))
+    setIngredientsUsed(ingredientsUsed.filter(t => t !== tool))
   }
 
   const filteredTools = COMMON_TOOLS.filter(
     tool => 
       tool.toLowerCase().includes(newTool.toLowerCase()) &&
-      !toolsUsed.includes(tool)
+      !ingredientsUsed.includes(tool)
   )
 
   const handleSave = async (e: React.FormEvent) => {
@@ -105,7 +105,7 @@ export default function NewRitualPage() {
           intent: intent.trim() || null,
           description: description.trim() || null,
           moon_phase: moonPhase.replace(/[🌑🌒🌓🌔🌕🌖🌗🌘]/g, '').trim(),
-          tools_used: toolsUsed.length > 0 ? toolsUsed : null,
+          tools_used: ingredientsUsed.length > 0 ? ingredientsUsed : null,
           outcome: outcome.trim() || null,
           performed_at: new Date(performedAt).toISOString(),
         })
@@ -245,7 +245,7 @@ export default function NewRitualPage() {
               </label>
               <div className="space-y-2">
                 <div className="flex flex-wrap gap-2 mb-2">
-                  {toolsUsed.map((tool) => (
+                  {ingredientsUsed.map((tool) => (
                     <span
                       key={tool}
                       className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-purple-900/20 text-purple-300"
