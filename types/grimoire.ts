@@ -1,179 +1,87 @@
-// types/grimoire.ts - TypeScript types for Grimoire entries
+// ✅ CORRECTED: GrimoireEntry interface that matches your actual database schema
 
 export interface GrimoireEntry {
   id: string
   user_id: string
   
   // Basic Information
-  title: string
-  type: GrimoireEntryType
-  category?: string
+  title: string // NOT NULL
+  type: 'ritual' | 'spell' | 'chant' | 'blessing' | 'invocation' | 'meditation' | 'divination' | 'other' // NOT NULL, CHECK constraint
+  purpose: string | null
   
   // Content
-  description?: string
-  ingredients?: string[]
-  instructions?: string
-  notes?: string
+  ingredients: string[] | null // ARRAY type
+  instructions: string // NOT NULL
+  notes: string | null
+  source: string | null
   
-  // Magical Properties
-  intent?: string
-  best_timing?: string
-  difficulty_level?: DifficultyLevel
-  
-  // Correspondences
-  moon_phase?: string
-  season?: Season
-  element?: Element
-  planet?: string
-  chakra?: string
-  
-  // Metadata
-  source?: string
-  tags?: string[]
-  is_favorite: boolean
-  is_tested: boolean
-  effectiveness_rating?: number // 1-5 scale
+  // Additional Fields
+  moon_phase_compatibility: string[] | null // ARRAY type
+  is_public: boolean // DEFAULT false
+  category: string | null
+  content: string | null // This exists but instructions is the main content field
+  subcategory: string | null
+  description: string | null
+  intent: string | null
+  best_timing: string | null
+  difficulty_level: number | null
+  moon_phase: string | null
+  season: string | null
+  element: string | null
+  planet: string | null
+  chakra: string | null
+  tags: string[] | null // ARRAY type (direct on table)
+  is_favorite: boolean // DEFAULT false
+  is_tested: boolean // DEFAULT false
+  effectiveness_rating: number | null
   
   // Timestamps
   created_at: string
   updated_at: string
 }
 
-export type GrimoireEntryType = 
-  | 'spell'
-  | 'ritual'
-  | 'recipe'
-  | 'knowledge'
-  | 'divination'
-
-export type DifficultyLevel = 
-  | 'beginner'
-  | 'intermediate' 
-  | 'advanced'
-
-export type Season = 
-  | 'spring'
-  | 'summer'
-  | 'autumn'
-  | 'winter'
-
-export type Element = 
-  | 'fire'
-  | 'water'
-  | 'earth'
-  | 'air'
-  | 'spirit'
-
+// Type for the form data when creating a new entry
 export interface CreateGrimoireEntryData {
   title: string
-  type: GrimoireEntryType
-  category?: string
-  description?: string
+  type: GrimoireEntry['type']
+  purpose?: string
   ingredients?: string[]
-  instructions?: string
+  instructions: string
   notes?: string
+  source?: string
+  moon_phase_compatibility?: string[]
+  is_public?: boolean
+  category?: string
+  content?: string
+  subcategory?: string
+  description?: string
   intent?: string
   best_timing?: string
-  difficulty_level?: DifficultyLevel
+  difficulty_level?: number
   moon_phase?: string
-  season?: Season
-  element?: Element
+  season?: string
+  element?: string
   planet?: string
   chakra?: string
-  source?: string
   tags?: string[]
   is_favorite?: boolean
   is_tested?: boolean
   effectiveness_rating?: number
 }
 
-export interface UpdateGrimoireEntryData extends CreateGrimoireEntryData {
-  id: string
+// Valid type options (matches CHECK constraint in database)
+export const GRIMOIRE_ENTRY_TYPES = [
+  'ritual',
+  'spell', 
+  'chant',
+  'blessing',
+  'invocation',
+  'meditation',
+  'divination',
+  'other'
+] as const
+
+// Type guard function
+export function isValidGrimoireType(type: string): type is GrimoireEntry['type'] {
+  return GRIMOIRE_ENTRY_TYPES.includes(type as GrimoireEntry['type'])
 }
-
-export interface GrimoireFilters {
-  search?: string
-  type?: GrimoireEntryType
-  category?: string
-  difficulty_level?: DifficultyLevel
-  element?: Element
-  season?: Season
-  is_favorite?: boolean
-  is_tested?: boolean
-}
-
-export interface GrimoirePagination {
-  page: number
-  limit: number
-  total: number
-  totalPages: number
-}
-
-export interface GrimoireApiResponse {
-  entries: GrimoireEntry[]
-  pagination: GrimoirePagination
-}
-
-// Constants for dropdowns and validation
-export const GRIMOIRE_ENTRY_TYPES: { value: GrimoireEntryType; label: string }[] = [
-  { value: 'spell', label: 'Spell' },
-  { value: 'ritual', label: 'Ritual' },
-  { value: 'recipe', label: 'Recipe/Potion' },
-  { value: 'knowledge', label: 'Knowledge/Lore' },
-  { value: 'divination', label: 'Divination Method' }
-]
-
-export const DIFFICULTY_LEVELS: { value: DifficultyLevel; label: string }[] = [
-  { value: 'beginner', label: 'Beginner' },
-  { value: 'intermediate', label: 'Intermediate' },
-  { value: 'advanced', label: 'Advanced' }
-]
-
-export const SEASONS: { value: Season; label: string }[] = [
-  { value: 'spring', label: 'Spring' },
-  { value: 'summer', label: 'Summer' },
-  { value: 'autumn', label: 'Autumn' },
-  { value: 'winter', label: 'Winter' }
-]
-
-export const ELEMENTS: { value: Element; label: string }[] = [
-  { value: 'fire', label: 'Fire' },
-  { value: 'water', label: 'Water' },
-  { value: 'earth', label: 'Earth' },
-  { value: 'air', label: 'Air' },
-  { value: 'spirit', label: 'Spirit' }
-]
-
-export const MOON_PHASES = [
-  'New Moon',
-  'Waxing Crescent',
-  'First Quarter',
-  'Waxing Gibbous',
-  'Full Moon',
-  'Waning Gibbous',
-  'Last Quarter',
-  'Waning Crescent'
-]
-
-export const PLANETS = [
-  'Sun',
-  'Moon', 
-  'Mercury',
-  'Venus',
-  'Mars',
-  'Jupiter',
-  'Saturn',
-  'Uranus',
-  'Neptune',
-  'Pluto'
-]
-
-export const CHAKRAS = [
-  'Root',
-  'Sacral',
-  'Solar Plexus',
-  'Heart',
-  'Throat',
-  'Third Eye',
-  'Crown'
-]

@@ -1,4 +1,6 @@
-// app/api/grimoire/[id]/route.ts - Individual Grimoire Entry API
+// ================================
+// FILE 2: app/api/grimoire/[id]/route.ts
+// ================================
 
 import { NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase/server'
@@ -81,6 +83,17 @@ export async function PUT(
       return NextResponse.json({ error: 'Type is required' }, { status: 400 })
     }
 
+    // ✅ FIXED: Add validation for instructions (NOT NULL field)
+    if (!instructions || instructions.trim() === '') {
+      return NextResponse.json({ error: 'Instructions are required' }, { status: 400 })
+    }
+
+    // ✅ FIXED: Validate type against database CHECK constraint
+    const validTypes = ['ritual', 'spell', 'chant', 'blessing', 'invocation', 'meditation', 'divination', 'other']
+    if (!validTypes.includes(type.trim())) {
+      return NextResponse.json({ error: 'Invalid type provided' }, { status: 400 })
+    }
+
     // Prepare data for update
     const updateData = {
       title: title.trim(),
@@ -88,7 +101,7 @@ export async function PUT(
       category: category?.trim() || null,
       description: description?.trim() || null,
       ingredients: ingredients || [],
-      instructions: instructions?.trim() || null,
+      instructions: instructions.trim(), // ✅ FIXED: Remove || null since this is NOT NULL
       notes: notes?.trim() || null,
       intent: intent?.trim() || null,
       best_timing: best_timing?.trim() || null,

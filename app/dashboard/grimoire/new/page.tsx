@@ -7,13 +7,15 @@ import Link from 'next/link'
 import { ArrowLeft, Save, Plus, X, BookOpen, Sparkles, Info } from 'lucide-react'
 import { TagSelector } from '@/components/ui/tag-selector'
 
+// ✅ FIXED: Updated categories to match database CHECK constraint
 const CATEGORIES = [
   { value: 'spell', label: 'Spell', icon: '✨' },
   { value: 'ritual', label: 'Ritual', icon: '🕯️' },
   { value: 'chant', label: 'Chant', icon: '📜' },
   { value: 'blessing', label: 'Blessing', icon: '💗' },
   { value: 'invocation', label: 'Invocation', icon: '🙏' },
-  { value: 'recipe', label: 'Recipe', icon: '🧪' },
+  { value: 'meditation', label: 'Meditation', icon: '🧘' },
+  { value: 'divination', label: 'Divination', icon: '🔮' },
   { value: 'other', label: 'Other', icon: '📖' },
 ]
 
@@ -45,10 +47,13 @@ const COMMON_TOOLS = [
 
 export default function NewGrimoireEntryPage() {
   const [title, setTitle] = useState('')
-  const [category, setCategory] = useState('spell')
-  const [subcategory, setSubcategory] = useState('')
-  const [content, setContent] = useState('')
+  const [type, setType] = useState('spell') // ✅ FIXED: Renamed from category to type
+  const [category, setCategory] = useState('') // ✅ FIXED: This is now the subcategory
+  const [subcategory, setSubcategory] = useState('') 
+  const [instructions, setInstructions] = useState('') // ✅ FIXED: Renamed from content
   const [purpose, setPurpose] = useState('')
+  const [description, setDescription] = useState('') // ✅ ADDED: New description field
+  const [intent, setIntent] = useState('') // ✅ ADDED: New intent field
   const [ingredients, setIngredients] = useState<string[]>([])
   const [newIngredient, setNewIngredient] = useState('')
   const [tools, setTools] = useState<string[]>([])
@@ -98,7 +103,7 @@ export default function NewGrimoireEntryPage() {
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!title.trim() || !content.trim()) return
+    if (!title.trim() || !instructions.trim()) return // ✅ FIXED: Check instructions instead of content
 
     setSaving(true)
 
@@ -106,37 +111,40 @@ export default function NewGrimoireEntryPage() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error('Not authenticated')
 
+      // ✅ FIXED: Combine ingredients and tools properly
+      const allIngredients = [...ingredients, ...tools]
+
+      // ✅ FIXED: Map form fields to correct database fields
+      const insertData = {
+        user_id: user.id,
+        title: title.trim(),
+        type: type, // Maps to type field (required, with CHECK constraint)
+        category: category.trim() || null, // Maps to category field
+        subcategory: subcategory.trim() || null, // Maps to subcategory field
+        instructions: instructions.trim(), // Maps to instructions field (NOT NULL)
+        purpose: purpose.trim() || null, // Maps to purpose field
+        description: description.trim() || null, // Maps to description field
+        intent: intent.trim() || null, // Maps to intent field
+        ingredients: allIngredients.length > 0 ? allIngredients : null, // ARRAY type
+        best_timing: bestTiming.trim() || null,
+        source: source.trim() || null,
+        notes: notes.trim() || null,
+        tags: selectedTags.length > 0 ? selectedTags : null, // ARRAY type for simple tags
+      }
+
       const { data, error } = await supabase
         .from('grimoire_entries')
-        .insert({
-          user_id: user.id,
-          title: title.trim(),
-          category,
-          subcategory: subcategory || null,
-          content: content.trim(),
-          purpose: purpose.trim() || null,
-// ✅ REPLACE both lines with this single line:
-ingredients: [...(ingredients || []), ...(tools || [])].length > 0 ? [...(ingredients || []), ...(tools || [])] : null,
-          best_timing: bestTiming.trim() || null,
-          source: source.trim() || null,
-          notes: notes.trim() || null,
-        })
+        .insert(insertData)
         .select()
         .single()
 
-      if (error) throw error
-
-      // Save tag relationships
-      if (data && selectedTags.length > 0) {
-        const tagRelations = selectedTags.map(tagId => ({
-          grimoire_entry_id: data.id,
-          tag_id: tagId
-        }))
-
-        await supabase
-          .from('grimoire_entry_tags')
-          .insert(tagRelations)
+      if (error) {
+        console.error('Database error:', error)
+        throw error
       }
+
+      // Note: If you want to use the grimoire_entry_tags junction table instead of the tags array,
+      // you can add that logic here for more complex tag relationships
 
       router.push('/dashboard/grimoire')
     } catch (error) {
@@ -166,7 +174,7 @@ ingredients: [...(ingredients || []), ...(tools || [])].length > 0 ? [...(ingred
 
       <form onSubmit={handleSave} className="space-y-6">
         <div className="card-mystical space-y-4">
-          {/* Title and Category */}
+          {/* Title and Type */}
           <div className="grid md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-2">
@@ -184,12 +192,13 @@ ingredients: [...(ingredients || []), ...(tools || [])].length > 0 ? [...(ingred
 
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-2">
-                Category *
+                Type *
               </label>
               <select
-                value={category}
-                onChange={(e) => setCategory(e.target.value)}
+                value={type}
+                onChange={(e) => setType(e.target.value)}
                 className="input-mystical w-full"
+                required
               >
                 {CATEGORIES.map(cat => (
                   <option key={cat.value} value={cat.value}>
@@ -200,18 +209,18 @@ ingredients: [...(ingredients || []), ...(tools || [])].length > 0 ? [...(ingred
             </div>
           </div>
 
-          {/* Subcategory and Purpose */}
+          {/* Category and Subcategory */}
           <div className="grid md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-2">
-                Subcategory
+                Category
               </label>
               <select
-                value={subcategory}
-                onChange={(e) => setSubcategory(e.target.value)}
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
                 className="input-mystical w-full"
               >
-                <option value="">Select subcategory...</option>
+                <option value="">Select category...</option>
                 {SUBCATEGORIES.map(sub => (
                   <option key={sub} value={sub}>
                     {sub.charAt(0).toUpperCase() + sub.slice(1)}
@@ -220,6 +229,22 @@ ingredients: [...(ingredients || []), ...(tools || [])].length > 0 ? [...(ingred
               </select>
             </div>
 
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Subcategory
+              </label>
+              <input
+                type="text"
+                value={subcategory}
+                onChange={(e) => setSubcategory(e.target.value)}
+                placeholder="e.g., Moon magic, Herbalism..."
+                className="input-mystical w-full"
+              />
+            </div>
+          </div>
+
+          {/* Purpose, Description, and Intent */}
+          <div className="grid md:grid-cols-3 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-2">
                 Purpose
@@ -232,24 +257,50 @@ ingredients: [...(ingredients || []), ...(tools || [])].length > 0 ? [...(ingred
                 className="input-mystical w-full"
               />
             </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Description
+              </label>
+              <input
+                type="text"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Brief description..."
+                className="input-mystical w-full"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Intent
+              </label>
+              <input
+                type="text"
+                value={intent}
+                onChange={(e) => setIntent(e.target.value)}
+                placeholder="Magical intention..."
+                className="input-mystical w-full"
+              />
+            </div>
           </div>
 
-          {/* Content */}
+          {/* Instructions */}
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-2">
-              Content *
+              Instructions *
             </label>
             <textarea
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              placeholder={`Write your ${category} here... Include steps, words, movements, visualizations, etc.`}
+              value={instructions}
+              onChange={(e) => setInstructions(e.target.value)}
+              placeholder={`Write the instructions for your ${type} here... Include steps, words, movements, visualizations, etc.`}
               className="input-mystical w-full min-h-[200px] resize-none font-mono"
               required
             />
           </div>
 
           {/* Ingredients */}
-          {['spell', 'recipe'].includes(category) && (
+          {['spell', 'ritual', 'meditation'].includes(type) && (
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-2">
                 Ingredients / Materials
@@ -456,7 +507,7 @@ ingredients: [...(ingredients || []), ...(tools || [])].length > 0 ? [...(ingred
           </Link>
           <button
             type="submit"
-            disabled={saving || !title.trim() || !content.trim()}
+            disabled={saving || !title.trim() || !instructions.trim()}
             className="btn-mystical disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Save className="w-5 h-5 mr-2" />

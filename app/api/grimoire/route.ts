@@ -1,4 +1,6 @@
-// app/api/grimoire/route.ts - Grimoire API endpoint
+// ================================
+// FILE 1: app/api/grimoire/route.ts
+// ================================
 
 import { NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase/server'
@@ -48,6 +50,17 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Type is required' }, { status: 400 })
     }
 
+    // ✅ FIXED: Add validation for instructions (NOT NULL field)
+    if (!instructions || instructions.trim() === '') {
+      return NextResponse.json({ error: 'Instructions are required' }, { status: 400 })
+    }
+
+    // ✅ FIXED: Validate type against database CHECK constraint
+    const validTypes = ['ritual', 'spell', 'chant', 'blessing', 'invocation', 'meditation', 'divination', 'other']
+    if (!validTypes.includes(type.trim())) {
+      return NextResponse.json({ error: 'Invalid type provided' }, { status: 400 })
+    }
+
     // Prepare data for insertion
     const grimoireData = {
       user_id: user.id,
@@ -56,7 +69,7 @@ export async function POST(request: Request) {
       category: category?.trim() || null,
       description: description?.trim() || null,
       ingredients: ingredients || [],
-      instructions: instructions?.trim() || null,
+      instructions: instructions.trim(), // ✅ FIXED: Remove || null since this is NOT NULL
       notes: notes?.trim() || null,
       intent: intent?.trim() || null,
       best_timing: best_timing?.trim() || null,
