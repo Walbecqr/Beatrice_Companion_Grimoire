@@ -23,6 +23,7 @@ import {
   Zap
 } from 'lucide-react'
 import { format } from 'date-fns'
+import { toast } from 'react-hot-toast'
 
 interface Correspondence {
   id: string
@@ -75,9 +76,10 @@ export default function CorrespondenceDetailPage({ params }: { params: { id: str
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [isEditing, setIsEditing] = useState(false)
-  const [editedNotes, setEditedNotes] = useState('')
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [toastState, setToastState] = useState<{ type: 'success' | 'error', message: string } | null>(null)
+  const [editedNotes, setEditedNotes] = useState<string>('')
   
   const router = useRouter()
   const supabase = createClient()
@@ -132,10 +134,10 @@ export default function CorrespondenceDetailPage({ params }: { params: { id: str
         personal_notes: editedNotes.trim() || null
       })
       setIsEditing(false)
-      alert('Notes saved successfully!')
+      toast.success('Notes saved successfully!')
     } catch (error: any) {
       console.error('Error saving notes:', error)
-      alert('Failed to save notes. Please try again.')
+      toast.error('Failed to save notes. Please try again.')
     } finally {
       setSaving(false)
     }
@@ -239,9 +241,21 @@ export default function CorrespondenceDetailPage({ params }: { params: { id: str
       </div>
     )
   }
-
   return (
     <div className="max-w-4xl mx-auto space-y-6">
+      {/* Toast Notification */}
+      {toastState && (
+        <div
+          className={`fixed top-6 left-1/2 transform -translate-x-1/2 z-50 px-6 py-3 rounded-lg shadow-lg text-white ${
+            toastState.type === 'success'
+              ? 'bg-green-600'
+              : 'bg-red-600'
+          }`}
+          onClick={() => setToastState(null)}
+        >
+          {toastState.message}
+        </div>
+      )}
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4">
