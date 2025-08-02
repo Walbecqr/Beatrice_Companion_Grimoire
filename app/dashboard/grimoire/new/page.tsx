@@ -115,8 +115,8 @@ export default function NewGrimoireEntryPage() {
           subcategory: subcategory || null,
           content: content.trim(),
           purpose: purpose.trim() || null,
-          ingredients: ingredients.length > 0 ? ingredients : null,
-          ingredients: tools.length > 0 ? tools : null,
+// ✅ REPLACE both lines with this single line:
+ingredients: [...(ingredients || []), ...(tools || [])].length > 0 ? [...(ingredients || []), ...(tools || [])] : null,
           best_timing: bestTiming.trim() || null,
           source: source.trim() || null,
           notes: notes.trim() || null,
