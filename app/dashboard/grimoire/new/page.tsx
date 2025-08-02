@@ -116,7 +116,7 @@ export default function NewGrimoireEntryPage() {
           content: content.trim(),
           purpose: purpose.trim() || null,
           ingredients: ingredients.length > 0 ? ingredients : null,
-          tools: tools.length > 0 ? tools : null,
+          ingredients: tools.length > 0 ? tools : null,
           best_timing: bestTiming.trim() || null,
           source: source.trim() || null,
           notes: notes.trim() || null,

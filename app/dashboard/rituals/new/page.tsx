@@ -11,22 +11,22 @@ import { format } from 'date-fns'
 const RITUAL_TEMPLATES = {
   tarot: {
     title: 'Tarot Reading',
-    tools: ['Tarot deck', 'Candle', 'Journal'],
+    ingredients: ['Tarot deck', 'Candle', 'Journal'],
     intents: ['Guidance', 'Clarity', 'Insight'],
   },
   spell: {
     title: 'Spell Work',
-    tools: ['Candles', 'Herbs', 'Crystals', 'Incense'],
+    ingredients: ['Candles', 'Herbs', 'Crystals', 'Incense'],
     intents: ['Protection', 'Love', 'Abundance', 'Healing', 'Banishing'],
   },
   meditation: {
     title: 'Meditation Practice',
-    tools: ['Cushion', 'Incense', 'Music', 'Crystals'],
+    ingredients: ['Cushion', 'Incense', 'Music', 'Crystals'],
     intents: ['Peace', 'Clarity', 'Connection', 'Grounding'],
   },
   ritual: {
     title: 'Sacred Ritual',
-    tools: ['Altar items', 'Candles', 'Offerings', 'Sacred texts'],
+    ingredients: ['Altar items', 'Candles', 'Offerings', 'Sacred texts'],
     intents: ['Celebration', 'Honor', 'Release', 'Manifestation'],
   },
 }
