@@ -4,6 +4,7 @@
 
 import { NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase/server'
+import { isValidGrimoireType } from '@/types/grimoire'
 
 export async function POST(request: Request) {
   try {
@@ -54,14 +55,6 @@ export async function POST(request: Request) {
     if (!instructions || instructions.trim() === '') {
       return NextResponse.json({ error: 'Instructions are required' }, { status: 400 })
     }
-
-    // ✅ FIXED: Validate type against database CHECK constraint
-// At the top of app/api/grimoire/route.ts
-import { NextResponse } from 'next/server'
-import { createServerClient } from '@/lib/supabase/server'
-import { GRIMOIRE_ENTRY_TYPES, isValidGrimoireType } from '@/types/grimoire'
-
-// …later in the POST handler…
 
     // ✅ FIXED: Validate type against database CHECK constraint
     if (!isValidGrimoireType(type.trim())) {
