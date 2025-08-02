@@ -1,35 +1,57 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, Edit2, Save, Trash2, Star, Sparkles, BookOpen, Eye, Share2, Plus, X } from 'lucide-react'
+import { 
+  ArrowLeft, 
+  Edit2, 
+  Save, 
+  X,
+  Trash2, 
+  Star, 
+  Sparkles, 
+  BookOpen, 
+  Eye, 
+  Share2,
+  AlertCircle,
+  Heart,
+  Leaf,
+  Globe,
+  Calendar,
+  Zap
+} from 'lucide-react'
 import { format } from 'date-fns'
 
 interface Correspondence {
   id: string
+  user_id: string | null
   name: string
   category: string
-  magical_properties: string[]
-  traditional_uses: string[]
+  description: string | null
+  botanical_name: string | null
+  common_names: string[] | null
+  magical_properties: string[] | null
+  traditional_uses: string[] | null
+  medical_uses: string[] | null
+  personal_applications: string[] | null
   personal_notes: string | null
   element: string | null
   planet: string | null
   zodiac_sign: string | null
   chakra: string | null
+  energy_type: string | null
+  deities: string[] | null
+  cultural_traditions: any | null
+  folklore: string | null
+  historical_uses: string[] | null
+  source: string | null
+  verified: boolean
   is_personal: boolean
   is_favorited: boolean
-  user_id: string | null
   created_at: string
   updated_at: string
-}
-
-interface RelatedEntry {
-  id: string
-  title: string
-  type: 'ritual' | 'journal'
-  created_at: string
 }
 
 const CATEGORIES = [
@@ -48,104 +70,78 @@ const CATEGORIES = [
   { value: 'other', label: 'Other', icon: '📜' }
 ]
 
-const MAGICAL_PROPERTIES = [
-  'protection', 'love', 'abundance', 'healing', 'banishing', 'cleansing',
-  'divination', 'wisdom', 'courage', 'peace', 'psychic_abilities', 
-  'spiritual_growth', 'grounding', 'transformation', 'communication',
-  'prosperity', 'fertility', 'luck', 'success', 'creativity', 'intuition',
-  'balance', 'harmony', 'strength', 'clarity', 'manifestation'
-]
-
-const ELEMENTS = ['Fire', 'Water', 'Earth', 'Air', 'Spirit']
-const PLANETS = ['Sun', 'Moon', 'Mercury', 'Venus', 'Mars', 'Jupiter', 'Saturn', 'Uranus', 'Neptune', 'Pluto']
-const CHAKRAS = ['Root', 'Sacral', 'Solar Plexus', 'Heart', 'Throat', 'Third Eye', 'Crown']
-
 export default function CorrespondenceDetailPage({ params }: { params: { id: string } }) {
   const [correspondence, setCorrespondence] = useState<Correspondence | null>(null)
-  const [relatedEntries, setRelatedEntries] = useState<RelatedEntry[]>([])
-  const [isEditing, setIsEditing] = useState(false)
-  
-  // Edit form state
-  const [editedName, setEditedName] = useState('')
-  const [editedCategory, setEditedCategory] = useState('')
-  const [editedProperties, setEditedProperties] = useState<string[]>([])
-  const [editedUses, setEditedUses] = useState<string[]>([''])
-  const [editedNotes, setEditedNotes] = useState('')
-  const [editedElement, setEditedElement] = useState('')
-  const [editedPlanet, setEditedPlanet] = useState('')
-  const [editedZodiacSign, setEditedZodiacSign] = useState('')
-  const [editedChakra, setEditedChakra] = useState('')
-  const [newProperty, setNewProperty] = useState('')
-  
-  const [saving, setSaving] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [isEditing, setIsEditing] = useState(false)
+  const [editedNotes, setEditedNotes] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [deleting, setDeleting] = useState(false)
   
   const router = useRouter()
   const supabase = createClient()
 
-  const fetchCorrespondence = useCallback(async () => {
+  useEffect(() => {
+    fetchCorrespondence()
+  }, [params.id])
+
+  const fetchCorrespondence = async () => {
     try {
-      const { data, error } = await supabase
+      setError(null)
+      const { data, error: fetchError } = await supabase
         .from('correspondences')
         .select('*')
         .eq('id', params.id)
         .single()
 
-      if (error) throw error
-      
+      if (fetchError) {
+        console.error('Correspondence fetch error:', fetchError)
+        if (fetchError.code === 'PGRST116') {
+          setError('Correspondence not found')
+        } else {
+          setError(fetchError.message)
+        }
+        return
+      }
+
       setCorrespondence(data)
-      // Initialize edit form with current values
-      setEditedName(data.name)
-      setEditedCategory(data.category)
-      setEditedProperties(data.magical_properties || [])
-      setEditedUses(data.traditional_uses.length > 0 ? data.traditional_uses : [''])
       setEditedNotes(data.personal_notes || '')
-      setEditedElement(data.element || '')
-      setEditedPlanet(data.planet || '')
-      setEditedZodiacSign(data.zodiac_sign || '')
-      setEditedChakra(data.chakra || '')
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching correspondence:', error)
-      router.push('/dashboard/correspondences')
+      setError(error.message || 'Failed to load correspondence')
     } finally {
       setLoading(false)
     }
-  }, [params.id, supabase, router])
+  }
 
-  const fetchRelatedEntries = useCallback(async () => {
+  const handleSaveNotes = async () => {
+    if (!correspondence) return
+
+    setSaving(true)
     try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
+      const { error } = await supabase
+        .from('correspondences')
+        .update({ personal_notes: editedNotes.trim() || null })
+        .eq('id', correspondence.id)
 
-      const correspondence_name = correspondence?.name.toLowerCase()
-      if (!correspondence_name) return
+      if (error) throw error
 
-      // Search rituals
-      const { data: rituals } = await supabase
-        .from('rituals')
-        .select('id, title, created_at')
-        .eq('user_id', user.id)
-        .ilike('description', `%${correspondence_name}%`)
-
-      // Search journal entries
-      const { data: journals } = await supabase
-        .from('journal_entries')
-        .select('id, title, created_at')
-        .eq('user_id', user.id)
-        .ilike('content', `%${correspondence_name}%`)
-
-      const related: RelatedEntry[] = [
-        ...(rituals || []).map(r => ({ ...r, type: 'ritual' as const })),
-        ...(journals || []).map(j => ({ ...j, type: 'journal' as const, title: j.title || 'Untitled Entry' }))
-      ].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-
-      setRelatedEntries(related.slice(0, 5))
-    } catch (error) {
-      console.error('Error fetching related entries:', error)
+      setCorrespondence({
+        ...correspondence,
+        personal_notes: editedNotes.trim() || null
+      })
+      setIsEditing(false)
+      alert('Notes saved successfully!')
+    } catch (error: any) {
+      console.error('Error saving notes:', error)
+      alert('Failed to save notes. Please try again.')
+    } finally {
+      setSaving(false)
     }
-  }, [correspondence?.name, supabase])
+  }
 
-  const toggleFavorite = async () => {
+  const handleToggleFavorite = async () => {
     if (!correspondence) return
 
     try {
@@ -160,115 +156,42 @@ export default function CorrespondenceDetailPage({ params }: { params: { id: str
         ...correspondence,
         is_favorited: !correspondence.is_favorited
       })
-    } catch (error) {
-      console.error('Error toggling favorite:', error)
-    }
-  }
-
-  const toggleProperty = (property: string) => {
-    if (editedProperties.includes(property)) {
-      setEditedProperties(editedProperties.filter(p => p !== property))
-    } else {
-      setEditedProperties([...editedProperties, property])
-    }
-  }
-
-  const addCustomProperty = () => {
-    if (newProperty.trim() && !editedProperties.includes(newProperty.toLowerCase())) {
-      setEditedProperties([...editedProperties, newProperty.toLowerCase().replace(' ', '_')])
-      setNewProperty('')
-    }
-  }
-
-  const addTraditionalUse = () => {
-    setEditedUses([...editedUses, ''])
-  }
-
-  const updateTraditionalUse = (index: number, value: string) => {
-    const updated = [...editedUses]
-    updated[index] = value
-    setEditedUses(updated)
-  }
-
-  const removeTraditionalUse = (index: number) => {
-    setEditedUses(editedUses.filter((_, i) => i !== index))
-  }
-
-  const handleSave = async () => {
-    if (!correspondence) return
-    setSaving(true)
-
-    try {
-      const filteredUses = editedUses.filter(use => use.trim())
-      
-      const response = await fetch(`/api/correspondences/${correspondence.id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          name: editedName.trim(),
-          category: editedCategory,
-          magical_properties: editedProperties,
-          traditional_uses: filteredUses,
-          personal_notes: editedNotes.trim() || null,
-          element: editedElement || null,
-          planet: editedPlanet || null,
-          zodiac_sign: editedZodiacSign.trim() || null,
-          chakra: editedChakra || null,
-        }),
-      })
-
-      if (!response.ok) throw new Error('Failed to update correspondence')
-      
-      const { correspondence: updatedCorrespondence } = await response.json()
-      setCorrespondence(updatedCorrespondence)
-      setIsEditing(false)
-    } catch (error) {
-      console.error('Error updating correspondence:', error)
-      alert('Failed to update correspondence')
-    } finally {
-      setSaving(false)
+    } catch (error: any) {
+      console.error('Error updating favorite:', error)
     }
   }
 
   const handleDelete = async () => {
-    if (!correspondence || !correspondence.is_personal) return
-    
+    if (!correspondence || !correspondence.is_personal) {
+      alert('Only personal correspondences can be deleted')
+      return
+    }
+
     if (!confirm(`Are you sure you want to delete "${correspondence.name}"? This action cannot be undone.`)) {
       return
     }
 
+    setDeleting(true)
     try {
-      const response = await fetch(`/api/correspondences/${correspondence.id}`, {
-        method: 'DELETE',
-      })
+      const { error } = await supabase
+        .from('correspondences')
+        .delete()
+        .eq('id', correspondence.id)
 
-      if (!response.ok) throw new Error('Failed to delete correspondence')
+      if (error) throw error
+
       router.push('/dashboard/correspondences')
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error deleting correspondence:', error)
-      alert('Failed to delete correspondence')
+      alert('Failed to delete correspondence. Please try again.')
+    } finally {
+      setDeleting(false)
     }
   }
 
   const getCategoryIcon = (category: string) => {
-    const iconMap: Record<string, string> = {
-      'herbs': '🌿',
-      'crystals': '💎',
-      'colors': '🎨',
-      'elements': '🔥',
-      'tools': '🔮',
-      'incense': '🕯️',
-      'oils': '🫗',
-      'candles': '🕯️',
-      'symbols': '✨',
-      'deities': '👑',
-      'animals': '🦋',
-      'trees': '🌳',
-      'other': '📜'
-    }
-    return iconMap[category] || '📜'
+    const categoryConfig = CATEGORIES.find(c => c.value === category)
+    return categoryConfig?.icon || '📜'
   }
 
   const getPropertyColor = (property: string) => {
@@ -300,410 +223,332 @@ export default function CorrespondenceDetailPage({ params }: { params: { id: str
     )
   }
 
-  if (!correspondence) return null
+  if (error || !correspondence) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <AlertCircle className="w-12 h-12 text-red-400 mx-auto mb-4" />
+          <div className="text-red-400 mb-2">Correspondence Not Found</div>
+          <div className="text-gray-400 text-sm mb-4">
+            {error || 'This correspondence entry could not be found.'}
+          </div>
+          <Link href="/dashboard/correspondences" className="btn-mystical">
+            Back to Correspondences
+          </Link>
+        </div>
+      </div>
+    )
+  }
 
   return (
-    <div className="max-w-4xl mx-auto">
+    <div className="max-w-4xl mx-auto space-y-6">
       {/* Header */}
-      <div className="mb-6">
-        <Link 
-          href="/dashboard/correspondences" 
-          className="inline-flex items-center text-purple-400 hover:text-purple-300 mb-4"
-        >
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          Back to Correspondences
-        </Link>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center space-x-4">
+          <Link 
+            href="/dashboard/correspondences" 
+            className="inline-flex items-center text-purple-400 hover:text-purple-300"
+          >
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Back to Correspondences
+          </Link>
+        </div>
 
-        <div className="flex items-start justify-between">
-          <div className="flex items-center space-x-4">
-            <span className="text-5xl">{getCategoryIcon(correspondence.category)}</span>
-            <div>
-              {isEditing ? (
-                <input
-                  type="text"
-                  value={editedName}
-                  onChange={(e) => setEditedName(e.target.value)}
-                  className="input-mystical text-3xl font-bold bg-transparent border-b-2 border-purple-500 px-0"
-                />
-              ) : (
-                <h1 className="text-3xl font-bold text-gradient">{correspondence.name}</h1>
-              )}
-              <div className="flex items-center space-x-4 text-sm text-gray-400 mt-2">
-                <span className="capitalize">{correspondence.category}</span>
-                {correspondence.is_personal && (
-                  <>
-                    <span>•</span>
-                    <span className="text-purple-400">Personal Entry</span>
-                  </>
-                )}
-                <span>•</span>
-                <span>Added {format(new Date(correspondence.created_at), 'MMM d, yyyy')}</span>
-              </div>
-            </div>
-          </div>
+        <div className="flex items-center space-x-2">
+          <button
+            onClick={handleToggleFavorite}
+            className={`p-2 rounded-lg transition-colors ${
+              correspondence.is_favorited 
+                ? 'text-yellow-400 bg-yellow-400/10' 
+                : 'text-gray-400 hover:text-yellow-400 hover:bg-yellow-400/10'
+            }`}
+          >
+            <Star className={`w-5 h-5 ${correspondence.is_favorited ? 'fill-current' : ''}`} />
+          </button>
 
-          {/* Actions */}
-          <div className="flex items-center space-x-2">
+          {correspondence.is_personal && (
             <button
-              onClick={toggleFavorite}
-              className="p-2 text-gray-400 hover:text-yellow-400 transition-colors"
+              onClick={handleDelete}
+              disabled={deleting}
+              className="p-2 text-red-400 hover:text-red-300 hover:bg-red-400/10 rounded-lg transition-colors disabled:opacity-50"
             >
-              <Star className={`w-6 h-6 ${correspondence.is_favorited ? 'fill-yellow-400 text-yellow-400' : ''}`} />
+              <Trash2 className="w-5 h-5" />
             </button>
-            
-            {correspondence.is_personal && (
-              <>
-                {isEditing ? (
-                  <>
-                    <button
-                      onClick={() => setIsEditing(false)}
-                      className="p-2 text-gray-400 hover:text-gray-200 transition-colors"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      onClick={handleSave}
-                      disabled={saving}
-                      className="btn-mystical px-4 py-2 text-sm"
-                    >
-                      <Save className="w-4 h-4 mr-1" />
-                      {saving ? 'Saving...' : 'Save Changes'}
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <button
-                      onClick={() => setIsEditing(true)}
-                      className="p-2 text-gray-400 hover:text-gray-200 transition-colors"
-                    >
-                      <Edit2 className="w-5 h-5" />
-                    </button>
-                    <button
-                      onClick={handleDelete}
-                      className="p-2 text-gray-400 hover:text-red-400 transition-colors"
-                    >
-                      <Trash2 className="w-5 h-5" />
-                    </button>
-                  </>
-                )}
-              </>
-            )}
-          </div>
+          )}
         </div>
       </div>
 
-      <div className="space-y-6">
-        {/* Category (Edit Mode) */}
-        {isEditing && (
-          <div className="card-mystical">
-            <h3 className="text-lg font-semibold mb-4">Category</h3>
-            <select
-              value={editedCategory}
-              onChange={(e) => setEditedCategory(e.target.value)}
-              className="input-mystical w-full max-w-md"
-            >
-              <option value="">Select a category</option>
-              {CATEGORIES.map(cat => (
-                <option key={cat.value} value={cat.value}>
-                  {cat.icon} {cat.label}
-                </option>
+      {/* Main Content */}
+      <div className="card-mystical space-y-6">
+        {/* Title and Category */}
+        <div className="flex items-start justify-between">
+          <div className="flex items-center space-x-4">
+            <span className="text-4xl">{getCategoryIcon(correspondence.category)}</span>
+            <div>
+              <div className="flex items-center space-x-3 mb-2">
+                <span className="px-3 py-1 rounded-full text-sm bg-purple-900/20 text-purple-300 capitalize">
+                  {correspondence.category}
+                </span>
+                {correspondence.is_personal && (
+                  <span className="px-3 py-1 rounded-full text-sm bg-green-900/20 text-green-300">
+                    Personal
+                  </span>
+                )}
+                {correspondence.verified && (
+                  <span className="px-3 py-1 rounded-full text-sm bg-blue-900/20 text-blue-300">
+                    Verified
+                  </span>
+                )}
+              </div>
+              <h1 className="text-3xl font-bold text-white mb-2">{correspondence.name}</h1>
+              {correspondence.botanical_name && (
+                <p className="text-gray-400 italic">{correspondence.botanical_name}</p>
+              )}
+              {correspondence.description && (
+                <p className="text-gray-300 mt-2">{correspondence.description}</p>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Common Names */}
+        {correspondence.common_names && correspondence.common_names.length > 0 && (
+          <div>
+            <h2 className="text-lg font-semibold text-white mb-3 flex items-center">
+              <Leaf className="w-5 h-5 mr-2" />
+              Common Names
+            </h2>
+            <div className="flex flex-wrap gap-2">
+              {correspondence.common_names.map((name, index) => (
+                <span
+                  key={index}
+                  className="px-3 py-1 rounded-full text-sm bg-gray-800 text-gray-300"
+                >
+                  {name}
+                </span>
               ))}
-            </select>
+            </div>
           </div>
         )}
 
         {/* Magical Properties */}
-        <div className="card-mystical">
-          <h3 className="text-lg font-semibold mb-4 flex items-center">
-            <Sparkles className="w-5 h-5 mr-2 text-purple-400" />
-            Magical Properties
-          </h3>
-          
-          {isEditing ? (
-            <div className="space-y-4">
-              {/* Selected Properties */}
-              <div className="flex flex-wrap gap-2 mb-4">
-                {editedProperties.map(property => (
-                  <span
-                    key={property}
-                    className={`inline-flex items-center px-3 py-1 rounded-full text-sm ${getPropertyColor(property)}`}
-                  >
-                    <Sparkles className="w-3 h-3 mr-1" />
-                    {property.replace('_', ' ')}
-                    <button
-                      type="button"
-                      onClick={() => setEditedProperties(editedProperties.filter(p => p !== property))}
-                      className="ml-2 hover:text-white transition-colors"
-                    >
-                      <X className="w-3 h-3" />
-                    </button>
-                  </span>
-                ))}
-              </div>
-
-              {/* Available Properties */}
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 mb-4">
-                {MAGICAL_PROPERTIES.map(property => (
-                  <button
-                    key={property}
-                    type="button"
-                    onClick={() => toggleProperty(property)}
-                    className={`text-left px-3 py-2 rounded-lg text-sm transition-all ${
-                      editedProperties.includes(property)
-                        ? 'bg-purple-600/20 border border-purple-500/50 text-purple-300'
-                        : 'bg-gray-800 hover:bg-gray-700 text-gray-300'
-                    }`}
-                  >
-                    {property.replace('_', ' ')}
-                  </button>
-                ))}
-              </div>
-
-              {/* Add Custom Property */}
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={newProperty}
-                  onChange={(e) => setNewProperty(e.target.value)}
-                  placeholder="Add custom property..."
-                  className="input-mystical flex-1"
-                  onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addCustomProperty())}
-                />
-                <button
-                  type="button"
-                  onClick={addCustomProperty}
-                  className="btn-mystical px-4"
-                >
-                  <Plus className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-          ) : (
+        {correspondence.magical_properties && correspondence.magical_properties.length > 0 && (
+          <div>
+            <h2 className="text-lg font-semibold text-white mb-3 flex items-center">
+              <Sparkles className="w-5 h-5 mr-2" />
+              Magical Properties
+            </h2>
             <div className="flex flex-wrap gap-2">
-              {correspondence.magical_properties.map(property => (
+              {correspondence.magical_properties.map((property, index) => (
                 <span
-                  key={property}
-                  className={`inline-flex items-center px-3 py-1 rounded-full text-sm ${getPropertyColor(property)}`}
+                  key={index}
+                  className={`px-3 py-1 rounded-full text-sm ${getPropertyColor(property.toLowerCase())}`}
                 >
-                  <Sparkles className="w-3 h-3 mr-1" />
-                  {property.replace('_', ' ')}
+                  {property.charAt(0).toUpperCase() + property.slice(1).replace('_', ' ')}
                 </span>
               ))}
+            </div>
+          </div>
+        )}
+
+        {/* Correspondences Grid */}
+        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {correspondence.element && (
+            <div className="flex items-center space-x-2">
+              <Zap className="w-4 h-4 text-purple-400" />
+              <div>
+                <div className="text-xs text-gray-400">Element</div>
+                <div className="text-sm text-gray-300">{correspondence.element}</div>
+              </div>
+            </div>
+          )}
+
+          {correspondence.planet && (
+            <div className="flex items-center space-x-2">
+              <Globe className="w-4 h-4 text-amber-400" />
+              <div>
+                <div className="text-xs text-gray-400">Planet</div>
+                <div className="text-sm text-gray-300">{correspondence.planet}</div>
+              </div>
+            </div>
+          )}
+
+          {correspondence.zodiac_sign && (
+            <div className="flex items-center space-x-2">
+              <Calendar className="w-4 h-4 text-indigo-400" />
+              <div>
+                <div className="text-xs text-gray-400">Zodiac</div>
+                <div className="text-sm text-gray-300">{correspondence.zodiac_sign}</div>
+              </div>
+            </div>
+          )}
+
+          {correspondence.chakra && (
+            <div className="flex items-center space-x-2">
+              <Heart className="w-4 h-4 text-pink-400" />
+              <div>
+                <div className="text-xs text-gray-400">Chakra</div>
+                <div className="text-sm text-gray-300">{correspondence.chakra}</div>
+              </div>
             </div>
           )}
         </div>
 
         {/* Traditional Uses */}
-        <div className="card-mystical">
-          <h3 className="text-lg font-semibold mb-4 flex items-center">
-            <BookOpen className="w-5 h-5 mr-2 text-green-400" />
-            Traditional Uses
-          </h3>
-          
-          {isEditing ? (
-            <div className="space-y-2">
-              {editedUses.map((use, index) => (
-                <div key={index} className="flex gap-2">
-                  <input
-                    type="text"
-                    value={use}
-                    onChange={(e) => updateTraditionalUse(index, e.target.value)}
-                    placeholder={`Traditional use ${index + 1}...`}
-                    className="input-mystical flex-1"
-                  />
-                  {editedUses.length > 1 && (
-                    <button
-                      type="button"
-                      onClick={() => removeTraditionalUse(index)}
-                      className="p-2 text-gray-400 hover:text-red-400 transition-colors"
-                    >
-                      <X className="w-5 h-5" />
-                    </button>
-                  )}
-                </div>
-              ))}
-              <button
-                type="button"
-                onClick={addTraditionalUse}
-                className="text-purple-400 hover:text-purple-300 text-sm flex items-center gap-1"
-              >
-                <Plus className="w-4 h-4" />
-                Add another use
-              </button>
-            </div>
-          ) : (
-            correspondence.traditional_uses.length > 0 ? (
-              <ul className="space-y-2">
+        {correspondence.traditional_uses && correspondence.traditional_uses.length > 0 && (
+          <div>
+            <h2 className="text-lg font-semibold text-white mb-3 flex items-center">
+              <BookOpen className="w-5 h-5 mr-2" />
+              Traditional Uses
+            </h2>
+            <div className="bg-gray-900/50 rounded-lg p-4">
+              <ul className="list-disc list-inside space-y-1 text-gray-300">
                 {correspondence.traditional_uses.map((use, index) => (
-                  <li key={index} className="flex items-start">
-                    <span className="text-green-400 mr-2">•</span>
-                    <span className="text-gray-300">{use}</span>
-                  </li>
+                  <li key={index}>{use}</li>
                 ))}
               </ul>
-            ) : (
-              <p className="text-gray-500 italic">No traditional uses listed</p>
-            )
-          )}
-        </div>
+            </div>
+          </div>
+        )}
 
-        {/* Additional Correspondences */}
-        <div className="card-mystical">
-          <h3 className="text-lg font-semibold mb-4">Additional Correspondences</h3>
-          
-          {isEditing ? (
-            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">Element</label>
-                <select
-                  value={editedElement}
-                  onChange={(e) => setEditedElement(e.target.value)}
-                  className="input-mystical w-full"
-                >
-                  <option value="">Select element</option>
-                  {ELEMENTS.map(el => (
-                    <option key={el} value={el}>{el}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">Planet</label>
-                <select
-                  value={editedPlanet}
-                  onChange={(e) => setEditedPlanet(e.target.value)}
-                  className="input-mystical w-full"
-                >
-                  <option value="">Select planet</option>
-                  {PLANETS.map(p => (
-                    <option key={p} value={p}>{p}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">Zodiac Sign</label>
-                <input
-                  type="text"
-                  value={editedZodiacSign}
-                  onChange={(e) => setEditedZodiacSign(e.target.value)}
-                  placeholder="e.g., Leo, Scorpio..."
-                  className="input-mystical w-full"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">Chakra</label>
-                <select
-                  value={editedChakra}
-                  onChange={(e) => setEditedChakra(e.target.value)}
-                  className="input-mystical w-full"
-                >
-                  <option value="">Select chakra</option>
-                  {CHAKRAS.map(c => (
-                    <option key={c} value={c}>{c}</option>
-                  ))}
-                </select>
+        {/* Medical Uses */}
+        {correspondence.medical_uses && correspondence.medical_uses.length > 0 && (
+          <div>
+            <h2 className="text-lg font-semibold text-white mb-3 flex items-center">
+              <Heart className="w-5 h-5 mr-2" />
+              Medical Uses
+            </h2>
+            <div className="bg-gray-900/50 rounded-lg p-4">
+              <ul className="list-disc list-inside space-y-1 text-gray-300">
+                {correspondence.medical_uses.map((use, index) => (
+                  <li key={index}>{use}</li>
+                ))}
+              </ul>
+              <div className="mt-3 p-3 bg-amber-900/20 border border-amber-500/30 rounded-lg">
+                <p className="text-amber-300 text-sm">
+                  <strong>Disclaimer:</strong> This information is for educational purposes only. 
+                  Consult a healthcare professional before using any substances for medical purposes.
+                </p>
               </div>
             </div>
-          ) : (
-            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
-              <div>
-                <span className="text-gray-400">Element:</span>
-                <p className="text-gray-200 font-medium">{correspondence.element || 'Not specified'}</p>
-              </div>
-              <div>
-                <span className="text-gray-400">Planet:</span>
-                <p className="text-gray-200 font-medium">{correspondence.planet || 'Not specified'}</p>
-              </div>
-              <div>
-                <span className="text-gray-400">Zodiac:</span>
-                <p className="text-gray-200 font-medium">{correspondence.zodiac_sign || 'Not specified'}</p>
-              </div>
-              <div>
-                <span className="text-gray-400">Chakra:</span>
-                <p className="text-gray-200 font-medium">{correspondence.chakra || 'Not specified'}</p>
-              </div>
+          </div>
+        )}
+
+        {/* Personal Applications */}
+        {correspondence.personal_applications && correspondence.personal_applications.length > 0 && (
+          <div>
+            <h2 className="text-lg font-semibold text-white mb-3 flex items-center">
+              <Eye className="w-5 h-5 mr-2" />
+              Personal Applications
+            </h2>
+            <div className="bg-gray-900/50 rounded-lg p-4">
+              <ul className="list-disc list-inside space-y-1 text-gray-300">
+                {correspondence.personal_applications.map((app, index) => (
+                  <li key={index}>{app}</li>
+                ))}
+              </ul>
             </div>
-          )}
-        </div>
+          </div>
+        )}
+
+        {/* Folklore */}
+        {correspondence.folklore && (
+          <div>
+            <h2 className="text-lg font-semibold text-white mb-3 flex items-center">
+              <BookOpen className="w-5 h-5 mr-2" />
+              Folklore & Legends
+            </h2>
+            <div className="bg-gray-900/50 rounded-lg p-4">
+              <p className="text-gray-300 whitespace-pre-wrap">{correspondence.folklore}</p>
+            </div>
+          </div>
+        )}
+
+        {/* Deities */}
+        {correspondence.deities && correspondence.deities.length > 0 && (
+          <div>
+            <h2 className="text-lg font-semibold text-white mb-3 flex items-center">
+              👑 Associated Deities
+            </h2>
+            <div className="flex flex-wrap gap-2">
+              {correspondence.deities.map((deity, index) => (
+                <span
+                  key={index}
+                  className="px-3 py-1 rounded-full text-sm bg-amber-900/20 text-amber-300"
+                >
+                  {deity}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Personal Notes */}
-        <div className="card-mystical">
-          <h3 className="text-lg font-semibold mb-4 flex items-center">
-            <Eye className="w-5 h-5 mr-2 text-blue-400" />
-            Personal Notes & Experiences
-          </h3>
+        <div>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-lg font-semibold text-white flex items-center">
+              <Edit2 className="w-5 h-5 mr-2" />
+              Personal Notes
+            </h2>
+            {!isEditing ? (
+              <button
+                onClick={() => setIsEditing(true)}
+                className="text-sm text-purple-400 hover:text-purple-300"
+              >
+                {correspondence.personal_notes ? 'Edit Notes' : 'Add Notes'}
+              </button>
+            ) : (
+              <div className="flex space-x-2">
+                <button
+                  onClick={() => setIsEditing(false)}
+                  className="text-sm text-gray-400 hover:text-gray-300"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSaveNotes}
+                  disabled={saving}
+                  className="text-sm text-purple-400 hover:text-purple-300 disabled:opacity-50"
+                >
+                  {saving ? 'Saving...' : 'Save'}
+                </button>
+              </div>
+            )}
+          </div>
 
           {isEditing ? (
             <textarea
               value={editedNotes}
               onChange={(e) => setEditedNotes(e.target.value)}
               placeholder="Share your personal experiences with this correspondence..."
-              className="input-mystical w-full min-h-[150px] resize-none"
+              className="input-mystical w-full min-h-[120px] resize-none"
             />
           ) : (
-            <div className={correspondence.personal_notes ? 'bg-purple-900/10 p-4 rounded-lg' : ''}>
+            <div className="bg-gray-900/50 rounded-lg p-4">
               {correspondence.personal_notes ? (
                 <p className="text-gray-300 whitespace-pre-wrap italic">
-                  &ldquo;{correspondence.personal_notes}&rdquo;
+                  "{correspondence.personal_notes}"
                 </p>
               ) : (
                 <p className="text-gray-500 italic">
-                  {correspondence.is_personal 
-                    ? 'No personal notes added yet.'
-                    : 'Add your personal experiences with this correspondence.'
-                  }
+                  No personal notes added yet. Share your experiences with this correspondence!
                 </p>
               )}
             </div>
           )}
         </div>
 
-        {/* Related Entries */}
-        {relatedEntries.length > 0 && !isEditing && (
-          <div className="card-mystical">
-            <h3 className="text-lg font-semibold mb-4 flex items-center">
-              <Share2 className="w-5 h-5 mr-2 text-indigo-400" />
-              Related Entries
-            </h3>
-            <div className="space-y-3">
-              {relatedEntries.map(entry => (
-                <Link
-                  key={`${entry.type}-${entry.id}`}
-                  href={`/dashboard/${entry.type === 'ritual' ? 'rituals' : 'journal'}/${entry.id}`}
-                  className="block p-3 bg-gray-800/50 rounded-lg hover:bg-gray-800/70 transition-colors"
-                >
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-medium text-gray-200">{entry.title}</p>
-                      <p className="text-sm text-gray-400 capitalize">
-                        {entry.type} • {format(new Date(entry.created_at), 'MMM d, yyyy')}
-                      </p>
-                    </div>
-                    <span className="text-purple-400">→</span>
-                  </div>
-                </Link>
-              ))}
-            </div>
+        {/* Footer */}
+        <div className="border-t border-gray-700 pt-4 flex items-center justify-between text-sm text-gray-400">
+          <div>
+            {correspondence.source && (
+              <span>Source: {correspondence.source}</span>
+            )}
           </div>
-        )}
-
-        {/* Usage Tips */}
-        {!correspondence.is_personal && !isEditing && (
-          <div className="card-mystical bg-indigo-900/20 border-indigo-500/30">
-            <div className="flex items-start space-x-3">
-              <BookOpen className="w-5 h-5 text-indigo-400 flex-shrink-0 mt-0.5" />
-              <div className="text-sm">
-                <p className="text-indigo-300 font-medium mb-1">Traditional Correspondence</p>
-                <p className="text-gray-400">
-                  This is a traditional correspondence entry. As you work with {correspondence.name} in your practice, 
-                  consider adding your personal notes and experiences to build your own magical reference library.
-                </p>
-              </div>
-            </div>
+          <div>
+            Added: {format(new Date(correspondence.created_at), 'MMM d, yyyy')}
           </div>
-        )}
+        </div>
       </div>
     </div>
   )
