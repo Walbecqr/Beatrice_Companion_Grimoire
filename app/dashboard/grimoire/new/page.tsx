@@ -51,7 +51,7 @@ export default function NewGrimoireEntryPage() {
   const [purpose, setPurpose] = useState('')
   const [ingredients, setIngredients] = useState<string[]>([])
   const [newIngredient, setNewIngredient] = useState('')
-  const [ingredients, setTools] = useState<string[]>([])
+  const [tools, setTools] = useState<string[]>([])
   const [newTool, setNewTool] = useState('')
   const [bestTiming, setBestTiming] = useState('')
   const [source, setSource] = useState('')
