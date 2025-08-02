@@ -527,7 +527,7 @@ export default function CorrespondenceDetailPage({ params }: { params: { id: str
             <div className="bg-gray-900/50 rounded-lg p-4">
               {correspondence.personal_notes ? (
                 <p className="text-gray-300 whitespace-pre-wrap italic">
-                  "{correspondence.personal_notes}"
+                  &ldquo;{correspondence.personal_notes}&rdquo;
                 </p>
               ) : (
                 <p className="text-gray-500 italic">
