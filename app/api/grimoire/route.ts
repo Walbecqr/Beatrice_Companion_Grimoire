@@ -56,11 +56,17 @@ export async function POST(request: Request) {
     }
 
     // ✅ FIXED: Validate type against database CHECK constraint
-    const validTypes = ['ritual', 'spell', 'chant', 'blessing', 'invocation', 'meditation', 'divination', 'other']
-    if (!validTypes.includes(type.trim())) {
+// At the top of app/api/grimoire/route.ts
+import { NextResponse } from 'next/server'
+import { createServerClient } from '@/lib/supabase/server'
+import { GRIMOIRE_ENTRY_TYPES, isValidGrimoireType } from '@/types/grimoire'
+
+// …later in the POST handler…
+
+    // ✅ FIXED: Validate type against database CHECK constraint
+    if (!isValidGrimoireType(type.trim())) {
       return NextResponse.json({ error: 'Invalid type provided' }, { status: 400 })
     }
-
     // Prepare data for insertion
     const grimoireData = {
       user_id: user.id,
