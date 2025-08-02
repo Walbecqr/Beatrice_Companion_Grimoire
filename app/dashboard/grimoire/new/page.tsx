@@ -53,7 +53,7 @@ export default function NewGrimoireEntryPage() {
   const [newIngredient, setNewIngredient] = useState('')
   const [tools, setTools] = useState<string[]>([])
   const [newTool, setNewTool] = useState('')
-  const [timing, setTiming] = useState('')
+  const [bestTiming, setBestTiming] = useState('')
   const [source, setSource] = useState('')
   const [notes, setNotes] = useState('')
   const [selectedTags, setSelectedTags] = useState<string[]>([])
@@ -117,7 +117,7 @@ export default function NewGrimoireEntryPage() {
           purpose: purpose.trim() || null,
           ingredients: ingredients.length > 0 ? ingredients : null,
           tools: tools.length > 0 ? tools : null,
-          timing: timing.trim() || null,
+          best_timing: bestTiming.trim() || null,
           source: source.trim() || null,
           notes: notes.trim() || null,
         })
@@ -380,8 +380,8 @@ export default function NewGrimoireEntryPage() {
               </label>
               <input
                 type="text"
-                value={timing}
-                onChange={(e) => setTiming(e.target.value)}
+                value={bestTiming}
+                onChange={(e) => setBestTiming(e.target.value)}
                 placeholder="e.g., Full Moon, Dawn, Samhain..."
                 className="input-mystical w-full"
                 list="timing-suggestions"
