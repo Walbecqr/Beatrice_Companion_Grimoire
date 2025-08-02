@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { Plus, Search, BookOpen, Sparkles, Scroll, Heart, Shield, Star, Brain, Filter, Crystal } from 'lucide-react'
+import { Plus, Search, BookOpen, Sparkles, Scroll, Heart, Shield, Star, Brain, Filter, Gem } from 'lucide-react'
 import Link from 'next/link'
 
 // ✅ FIXED: Updated interface to match actual database schema
@@ -46,7 +46,7 @@ const CATEGORY_CONFIG = {
   blessing: { icon: Heart, color: 'text-pink-400', bg: 'bg-pink-900/20' },
   invocation: { icon: Shield, color: 'text-indigo-400', bg: 'bg-indigo-900/20' },
   meditation: { icon: Brain, color: 'text-cyan-400', bg: 'bg-cyan-900/20' },
-  divination: { icon: Crystal, color: 'text-amber-400', bg: 'bg-amber-900/20' },
+  divination: { icon: Gem, color: 'text-amber-400', bg: 'bg-amber-900/20' },
   other: { icon: BookOpen, color: 'text-gray-400', bg: 'bg-gray-900/20' },
 }
 
