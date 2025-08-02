@@ -1,0 +1,63 @@
+// ...existing code...
+      {
+        "label": "docker-run: release",
+        "type": "docker-run",
+        "dependsOn": ["docker-build: release"],
+        "dockerRun": {
+          "image": "beatrice-companion-grimoire:release",
+          "command": ["npm", "start"],
+          "ports": [
+            "3000:3000"
+          ]
+        }
+      },
+// ...existing code...
+      {
+        "label": "docker-run: debug",
+        "type": "docker-run",
+        "dependsOn": ["docker-build: debug"],
+        "dockerRun": {
+          "image": "beatrice-companion-grimoire:debug",
+          "command": ["npm", "run", "dev"],
+          "ports": [
+            "3000:3000"
+          ]
+        }{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"type": "docker-build",
+			"label": "docker-build",
+			"platform": "node",
+			"dockerBuild": {
+				"dockerfile": "${workspaceFolder}/Dockerfile",
+				"context": "${workspaceFolder}",
+				"pull": true
+			}
+		},
+		{
+			"label": "docker-run: release",
+			"type": "docker-run",
+			"dependsOn": ["docker-build: release"],
+			"dockerRun": {
+				"image": "beatrice-companion-grimoire:release",
+				"command": ["npm", "start"],
+				"ports": [
+					"3000:3000"
+				]
+			}
+		},
+		{
+			"label": "docker-run: debug",
+			"type": "docker-run",
+			"dependsOn": ["docker-build: debug"],
+			"dockerRun": {
+				"image": "beatrice-companion-grimoire:debug",
+				"command": ["npm", "run", "dev"],
+				"ports": [
+					"3000:3000"
+				]
+			}
+		}
+	]
+}
