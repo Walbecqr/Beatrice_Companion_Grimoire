@@ -192,7 +192,8 @@ export function getCorrespondenceStats(correspondences: Correspondence[]) {
     verified: correspondences.filter(c => c.verified).length,
     byCategory: {} as Record<string, number>,
     byElement: {} as Record<string, number>,
-    topProperties: [] as Array<{ property: string; count: number }>
+    topProperties: [] as Array<{ property: string; count: number }>,
+    byEnergyType: { masculine: 0, feminine: 0, unknown: 0 }
   }
 
   // Count by category
@@ -200,6 +201,15 @@ export function getCorrespondenceStats(correspondences: Correspondence[]) {
     stats.byCategory[c.category] = (stats.byCategory[c.category] || 0) + 1
     if (c.element) {
       stats.byElement[c.element] = (stats.byElement[c.element] || 0) + 1
+    }
+    
+    // Count by energy type
+    if (c.energy_type === 'masculine') {
+      stats.byEnergyType.masculine++
+    } else if (c.energy_type === 'feminine') {
+      stats.byEnergyType.feminine++
+    } else {
+      stats.byEnergyType.unknown++
     }
   })
 
@@ -417,7 +427,7 @@ export async function filterCorrespondencesAsync(
  */
 export async function sortCorrespondencesAsync(
   correspondences: Correspondence[],
-  sortBy: string,
+  sortBy: 'name' | 'category' | 'created_at' | 'updated_at' | 'verified',
   order: 'asc' | 'desc' = 'asc'
 ): Promise<Correspondence[]> {
   if (correspondences.length > 100) {
@@ -437,7 +447,7 @@ export async function sortCorrespondencesAsync(
 export async function filterAndSortAsync(
   correspondences: Correspondence[],
   filters: any,
-  sortBy: string,
+  sortBy: 'name' | 'category' | 'created_at' | 'updated_at' | 'verified',
   order: 'asc' | 'desc' = 'asc'
 ): Promise<Correspondence[]> {
   if (correspondences.length > 50) {
