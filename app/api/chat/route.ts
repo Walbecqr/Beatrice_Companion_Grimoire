@@ -5,6 +5,11 @@ import { createServerClient } from '@/lib/supabase/server'
 // Enable mock mode for development (set to false when you have Anthropic credits)
 const USE_MOCK_MODE = false
 
+// Improved error checking for API key
+if (!USE_MOCK_MODE && !process.env.ANTHROPIC_API_KEY) {
+  console.error('❌ ANTHROPIC_API_KEY is not set in environment variables')
+}
+
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY || 'dummy-key-for-mock-mode',
 })
@@ -104,31 +109,40 @@ export async function POST(request: Request) {
       // Add a small delay to simulate API call
       await new Promise(resolve => setTimeout(resolve, 1000))
     } else {
+      console.log('🤖 Using real Anthropic API for Beatrice')
+      
+      // Validate API key exists
+      if (!process.env.ANTHROPIC_API_KEY || process.env.ANTHROPIC_API_KEY === 'dummy-key-for-mock-mode') {
+        throw new Error('ANTHROPIC_API_KEY not properly configured')
+      }
+
       // Get conversation history for context
       const { data: history } = await supabase
         .from('chat_messages')
         .select('role, content')
         .eq('session_id', currentSessionId)
         .order('created_at', { ascending: true })
-        .limit(10) // Reduced from 20 to 10 for better context management
-      // Convert messages to Claude format and ensure proper structure
-      const claudeMessages = history?.map(msg => ({
+        .limit(20) // Keep last 20 messages for context
+
+      // Convert messages to Claude format
+      const claudeMessages = (history || []).map(msg => ({
         role: msg.role as 'user' | 'assistant',
         content: msg.content
-      })) || []
-      // Add the new user message to the context
-      claudeMessages.push({
-        role: 'user',
-        content: userMessage.content
-      })
+      }))
+
+      console.log('📤 Sending request to Anthropic with', claudeMessages.length, 'messages')
+
       // Get response from Claude
       const completion = await anthropic.messages.create({
-        model: 'claude-3-haiku-20240307',
+        model: 'claude-sonnet-4-20250514', // Updated to latest model
         max_tokens: 500,
         temperature: 0.7,
         system: BEATRICE_SYSTEM_PROMPT,
         messages: claudeMessages,
       })
+
+      console.log('📥 Received response from Anthropic')
+
       // Extract text from Claude's response
       assistantMessage = completion.content[0].type === 'text' 
         ? completion.content[0].text 
@@ -147,13 +161,15 @@ export async function POST(request: Request) {
 
     if (saveAssistantError) throw saveAssistantError
 
+    console.log('✅ Chat response successful')
+
     return NextResponse.json({
       message: assistantMessage,
       sessionId: currentSessionId,
     })
 
   } catch (error: any) {
-    console.error('Chat API error:', error)
+    console.error('❌ Chat API error:', error)
     
     // Handle specific Anthropic errors
     if (error.status === 401) {
@@ -164,6 +180,11 @@ export async function POST(request: Request) {
     } else if (error.status === 429) {
       return NextResponse.json(
         { error: 'Rate limit exceeded. Please try again later.' },
+        { status: 500 }
+      )
+    } else if (error.message?.includes('ANTHROPIC_API_KEY')) {
+      return NextResponse.json(
+        { error: 'Anthropic API key is not configured. Please add ANTHROPIC_API_KEY to your .env.local file.' },
         { status: 500 }
       )
     }
