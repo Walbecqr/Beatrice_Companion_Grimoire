@@ -1,6 +1,28 @@
 // lib/utils/correspondence-utils.ts
 import { Correspondence, CORRESPONDENCE_CATEGORIES, MAGICAL_PROPERTIES } from '@/types/correspondence'
 
+// Web Worker instance for heavy operations
+let correspondenceWorker: Worker | null = null
+
+function getWorker(): Worker {
+  if (!correspondenceWorker && typeof Worker !== 'undefined') {
+    correspondenceWorker = new Worker('/workers/correspondence-worker.js')
+  }
+  return correspondenceWorker!
+}
+
+// Worker operation counter for request tracking
+let operationCounter = 0
+
+interface WorkerOperation<T> {
+  requestId: string
+  resolve: (result: T) => void
+  reject: (error: Error) => void
+  timeout: NodeJS.Timeout
+}
+
+const pendingOperations = new Map<string, WorkerOperation<any>>()
+
 /**
  * Get category icon for a correspondence category
  */
@@ -290,4 +312,324 @@ export function exportCorrespondencesToCSV(correspondences: Correspondence[]): s
     .join('\n')
 
   return csvContent
+}
+
+/**
+ * Execute Web Worker operation with promise interface
+ */
+function executeWorkerOperation<T>(
+  type: string,
+  data: any,
+  timeoutMs: number = 10000
+): Promise<T> {
+  return new Promise((resolve, reject) => {
+    try {
+      const worker = getWorker()
+      const requestId = `req_${++operationCounter}_${Date.now()}`
+      
+      // Set up timeout
+      const timeout = setTimeout(() => {
+        pendingOperations.delete(requestId)
+        reject(new Error(`Worker operation ${type} timed out`))
+      }, timeoutMs)
+      
+      // Store operation
+      pendingOperations.set(requestId, {
+        requestId,
+        resolve,
+        reject,
+        timeout
+      })
+      
+      // Set up worker message handler if not already set
+      if (!worker.onmessage) {
+        worker.onmessage = (e) => {
+          const { type: responseType, requestId: responseRequestId, result, error } = e.data
+          const operation = pendingOperations.get(responseRequestId)
+          
+          if (operation) {
+            clearTimeout(operation.timeout)
+            pendingOperations.delete(responseRequestId)
+            
+            if (responseType === 'SUCCESS') {
+              operation.resolve(result)
+            } else {
+              operation.reject(new Error(error || 'Worker operation failed'))
+            }
+          }
+        }
+        
+        worker.onerror = (error) => {
+          console.error('Worker error:', error)
+          // Reject all pending operations
+          for (const [id, operation] of pendingOperations.entries()) {
+            clearTimeout(operation.timeout)
+            operation.reject(new Error('Worker error'))
+          }
+          pendingOperations.clear()
+        }
+      }
+      
+      // Send message to worker
+      worker.postMessage({
+        type,
+        data,
+        requestId
+      })
+      
+    } catch (error: any) {
+      reject(error)
+    }
+  })
+}
+
+/**
+ * Web Worker enhanced filtering with better performance for large datasets
+ */
+export async function filterCorrespondencesAsync(
+  correspondences: Correspondence[],
+  filters: {
+    searchTerm?: string
+    category?: string
+    element?: string
+    energy?: 'masculine' | 'feminine'
+    planet?: string
+    properties?: string[]
+    personalOnly?: boolean
+    favoritesOnly?: boolean
+    verifiedOnly?: boolean
+  }
+): Promise<Correspondence[]> {
+  // Use worker for large datasets (>100 items)
+  if (correspondences.length > 100) {
+    return executeWorkerOperation('FILTER_CORRESPONDENCES', {
+      correspondences,
+      filters
+    })
+  }
+  
+  // Use synchronous function for small datasets
+  return filterCorrespondences(correspondences, filters)
+}
+
+/**
+ * Web Worker enhanced sorting
+ */
+export async function sortCorrespondencesAsync(
+  correspondences: Correspondence[],
+  sortBy: string,
+  order: 'asc' | 'desc' = 'asc'
+): Promise<Correspondence[]> {
+  if (correspondences.length > 100) {
+    return executeWorkerOperation('SORT_CORRESPONDENCES', {
+      correspondences,
+      sortBy,
+      order
+    })
+  }
+  
+  return sortCorrespondences(correspondences, sortBy, order)
+}
+
+/**
+ * Combined filter and sort operation using Web Worker
+ */
+export async function filterAndSortAsync(
+  correspondences: Correspondence[],
+  filters: any,
+  sortBy: string,
+  order: 'asc' | 'desc' = 'asc'
+): Promise<Correspondence[]> {
+  if (correspondences.length > 50) {
+    return executeWorkerOperation('FILTER_AND_SORT', {
+      correspondences,
+      filters,
+      sortBy,
+      order
+    })
+  }
+  
+  // Synchronous for small datasets
+  const filtered = filterCorrespondences(correspondences, filters)
+  return sortCorrespondences(filtered, sortBy, order)
+}
+
+/**
+ * Full processing pipeline with pagination using Web Worker
+ */
+export async function processCorrespondencesAsync(
+  correspondences: Correspondence[],
+  filters: any,
+  sortBy: string,
+  order: 'asc' | 'desc' = 'asc',
+  page: number = 1,
+  pageSize: number = 20
+): Promise<{
+  items: Correspondence[]
+  pagination: {
+    currentPage: number
+    pageSize: number
+    totalItems: number
+    totalPages: number
+    hasNextPage: boolean
+    hasPreviousPage: boolean
+  }
+}> {
+  return executeWorkerOperation('FULL_PROCESS', {
+    correspondences,
+    filters,
+    sortBy,
+    order,
+    page,
+    pageSize
+  })
+}
+
+/**
+ * Calculate statistics using Web Worker
+ */
+export async function getCorrespondenceStatsAsync(
+  correspondences: Correspondence[]
+): Promise<{
+  total: number
+  personal: number
+  favorited: number
+  verified: number
+  byCategory: Record<string, number>
+  byElement: Record<string, number>
+  topProperties: Array<{ property: string; count: number }>
+  byEnergyType: { masculine: number; feminine: number; unknown: number }
+}> {
+  if (correspondences.length > 50) {
+    return executeWorkerOperation('CALCULATE_STATISTICS', {
+      correspondences
+    })
+  }
+  
+  return getCorrespondenceStats(correspondences)
+}
+
+/**
+ * Group correspondences using Web Worker
+ */
+export async function groupCorrespondencesAsync(
+  correspondences: Correspondence[],
+  groupBy: 'category' | 'element' | 'energy' | 'planet' | 'firstLetter' | 'verified' | 'personal'
+): Promise<Record<string, Correspondence[]>> {
+  if (correspondences.length > 50) {
+    return executeWorkerOperation('GROUP_CORRESPONDENCES', {
+      correspondences,
+      groupBy
+    })
+  }
+  
+  // Fallback implementation for small datasets
+  const groups: Record<string, Correspondence[]> = {}
+  
+  correspondences.forEach(correspondence => {
+    let groupKey: string
+    
+    switch (groupBy) {
+      case 'category':
+        groupKey = correspondence.category
+        break
+      case 'element':
+        groupKey = correspondence.element || 'Unknown'
+        break
+      case 'energy':
+        groupKey = correspondence.energy_type || 'Unknown'
+        break
+      case 'planet':
+        groupKey = correspondence.planet || 'Unknown'
+        break
+      case 'firstLetter':
+        groupKey = correspondence.name.charAt(0).toUpperCase()
+        break
+      case 'verified':
+        groupKey = correspondence.verified ? 'Verified' : 'Unverified'
+        break
+      case 'personal':
+        groupKey = correspondence.is_personal ? 'Personal' : 'Community'
+        break
+      default:
+        groupKey = 'All'
+    }
+    
+    if (!groups[groupKey]) {
+      groups[groupKey] = []
+    }
+    groups[groupKey].push(correspondence)
+  })
+  
+  return groups
+}
+
+/**
+ * Find potential duplicates using Web Worker
+ */
+export async function findDuplicatesAsync(
+  correspondences: Correspondence[]
+): Promise<Array<{
+  original: { item: Correspondence; index: number }
+  duplicate: { item: Correspondence; index: number }
+  similarity: number
+}>> {
+  return executeWorkerOperation('FIND_DUPLICATES', {
+    correspondences
+  })
+}
+
+/**
+ * Bulk export preparation using Web Worker
+ */
+export async function prepareBulkExportAsync(
+  correspondences: Correspondence[]
+): Promise<{
+  data: any[]
+  count: number
+  timestamp: string
+}> {
+  return executeWorkerOperation('BULK_EXPORT', {
+    correspondences
+  })
+}
+
+/**
+ * Cleanup worker resources
+ */
+export function cleanupWorker(): void {
+  if (correspondenceWorker) {
+    // Clear pending operations
+    for (const operation of pendingOperations.values()) {
+      clearTimeout(operation.timeout)
+      operation.reject(new Error('Worker cleanup'))
+    }
+    pendingOperations.clear()
+    
+    // Terminate worker
+    correspondenceWorker.terminate()
+    correspondenceWorker = null
+  }
+}
+
+/**
+ * Check if Web Workers are supported
+ */
+export function isWorkerSupported(): boolean {
+  return typeof Worker !== 'undefined'
+}
+
+/**
+ * Get worker status and pending operations count
+ */
+export function getWorkerStatus(): {
+  isSupported: boolean
+  isActive: boolean
+  pendingOperations: number
+} {
+  return {
+    isSupported: isWorkerSupported(),
+    isActive: correspondenceWorker !== null,
+    pendingOperations: pendingOperations.size
+  }
 }

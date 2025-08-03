@@ -77,6 +77,7 @@ export default function ChatInterface({
     setMessages(prev => [...prev, userMessage])
     setInput('')
     setIsLoading(true)
+    
     try {
       const response = await fetch('/api/chat', {
         method: 'POST',
@@ -86,23 +87,87 @@ export default function ChatInterface({
         body: JSON.stringify({
           messages: [...messages, userMessage],
           sessionId,
+          stream: true, // Enable streaming
         }),
       })
-if (!response.ok) {
+      
+      if (!response.ok) {
         const errorData = await response.json().catch(() => ({}))
         throw new Error(errorData.error || `Failed to send message: ${response.status}`)
       }
-      const data = await response.json()
       
-      if (!data.message || typeof data.message !== 'string') {
-        throw new Error('Invalid response format from server')
+      // Check if response is streaming
+      const contentType = response.headers.get('content-type')
+      if (contentType?.includes('text/event-stream')) {
+        // Handle streaming response
+        const reader = response.body?.getReader()
+        const decoder = new TextDecoder()
+        
+        // Add empty assistant message that we'll update with streaming content
+        const assistantMessage: Message = {
+          role: 'assistant',
+          content: '',
+          created_at: new Date().toISOString(),
+        }
+        setMessages(prev => [...prev, assistantMessage])
+        const messageIndex = messages.length + 1 // Index of the assistant message we just added
+        
+        let accumulatedContent = ''
+        
+        if (reader) {
+          while (true) {
+            const { done, value } = await reader.read()
+            if (done) break
+            
+            const chunk = decoder.decode(value)
+            const lines = chunk.split('\n')
+            
+            for (const line of lines) {
+              if (line.startsWith('data: ')) {
+                try {
+                  const data = JSON.parse(line.slice(6))
+                  
+                  if (data.text) {
+                    accumulatedContent += data.text
+                    // Update the assistant message with accumulated content
+                    setMessages(prev => {
+                      const newMessages = [...prev]
+                      if (newMessages[messageIndex]) {
+                        newMessages[messageIndex] = {
+                          ...newMessages[messageIndex],
+                          content: accumulatedContent
+                        }
+                      }
+                      return newMessages
+                    })
+                  }
+                  
+                  if (data.done) {
+                    // Streaming complete
+                    console.log('✅ Streaming complete')
+                  }
+                } catch (e) {
+                  // Ignore parsing errors
+                }
+              }
+            }
+          }
+        }
+      } else {
+        // Fallback to non-streaming response
+        const data = await response.json()
+        
+        if (!data.message || typeof data.message !== 'string') {
+          throw new Error('Invalid response format from server')
+        }
+        
+        // Add Beatrice's response with timestamp
+        setMessages(prev => [...prev, {
+          role: 'assistant',
+          content: data.message,
+          created_at: new Date().toISOString(),
+        }])
       }
-      // Add Beatrice's response with timestamp
-      setMessages(prev => [...prev, {
-        role: 'assistant',
-        content: data.message,
-        created_at: new Date().toISOString(),
-      }])
     } catch (error: any) {
       console.error('Error sending message:', error)
       // Add error message to chat

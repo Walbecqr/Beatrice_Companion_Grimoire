@@ -1,6 +1,10 @@
 import { NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
 import { createServerClient } from '@/lib/supabase/server'
+import { Stream } from '@anthropic-ai/sdk/streaming'
+import { ContextManager } from '@/lib/utils/context-manager'
+import { ResponseCache } from '@/lib/utils/response-cache'
+import { edgeConfig } from '@/lib/utils/edge-config'
 
 // Enable mock mode for development (set to false when you have Anthropic credits)
 const USE_MOCK_MODE = false
@@ -13,6 +17,10 @@ if (!USE_MOCK_MODE && !process.env.ANTHROPIC_API_KEY) {
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY || 'dummy-key-for-mock-mode',
 })
+
+// Initialize context manager and response cache
+const contextManager = new ContextManager(anthropic)
+const responseCache = new ResponseCache()
 
 // Beatrice's personality and context
 const BEATRICE_SYSTEM_PROMPT = `You are Beatrice, a wise and compassionate spiritual companion. You are:
@@ -63,7 +71,7 @@ function getMockResponse(userMessage: string): string {
 
 export async function POST(request: Request) {
   try {
-    const { messages, sessionId } = await request.json()
+    const { messages, sessionId, stream = true } = await request.json()
     
     // Get current user
     const supabase = createServerClient()
@@ -99,15 +107,103 @@ export async function POST(request: Request) {
 
     if (saveUserError) throw saveUserError
 
-    let assistantMessage: string
+    // Check cache settings from Edge Config
+    const cacheSettings = await edgeConfig.getCacheSettings()
+    
+    // Try to get cached response for common queries
+    let cachedResponse: string | null = null
+    if (cacheSettings.enableResponseCache) {
+      cachedResponse = await responseCache.getCachedResponse(userMessage.content)
+      
+      if (cachedResponse) {
+        console.log('📦 Using cached response for common query')
+        
+        // Save cached response to database
+        await supabase
+          .from('chat_messages')
+          .insert({
+            session_id: currentSessionId,
+            user_id: user.id,
+            role: 'assistant',
+            content: cachedResponse,
+          })
+        
+        return NextResponse.json({
+          message: cachedResponse,
+          sessionId: currentSessionId,
+          cached: true,
+        })
+      }
+    }
 
     if (USE_MOCK_MODE) {
       // Use mock response in development
       console.log('🔮 Using mock mode for Beatrice')
-      assistantMessage = getMockResponse(userMessage.content)
+      const mockResponse = getMockResponse(userMessage.content)
       
-      // Add a small delay to simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000))
+      if (stream) {
+        // Simulate streaming for mock mode
+        const encoder = new TextEncoder()
+        const readableStream = new ReadableStream({
+          async start(controller) {
+            // Simulate streaming by sending the response in chunks
+            const words = mockResponse.split(' ')
+            for (const word of words) {
+              controller.enqueue(encoder.encode(`data: ${JSON.stringify({ text: word + ' ' })}\n\n`))
+              await new Promise(resolve => setTimeout(resolve, 50)) // Simulate typing speed
+            }
+            
+            // Save mock response to database
+            await supabase
+              .from('chat_messages')
+              .insert({
+                session_id: currentSessionId,
+                user_id: user.id,
+                role: 'assistant',
+                content: mockResponse,
+              })
+            
+            // Cache mock response if enabled
+            if (cacheSettings.enableResponseCache) {
+              await responseCache.cacheResponse(userMessage.content, mockResponse)
+            }
+            
+            controller.enqueue(encoder.encode(`data: ${JSON.stringify({ done: true, sessionId: currentSessionId })}\n\n`))
+            controller.close()
+          }
+        })
+        
+        return new Response(readableStream, {
+          headers: {
+            'Content-Type': 'text/event-stream',
+            'Cache-Control': 'no-cache',
+            'Connection': 'keep-alive',
+          },
+        })
+      } else {
+        // Non-streaming mock response
+        await new Promise(resolve => setTimeout(resolve, 1000))
+        
+        // Save assistant message
+        await supabase
+          .from('chat_messages')
+          .insert({
+            session_id: currentSessionId,
+            user_id: user.id,
+            role: 'assistant',
+            content: mockResponse,
+          })
+        
+        // Cache mock response if enabled
+        if (cacheSettings.enableResponseCache) {
+          await responseCache.cacheResponse(userMessage.content, mockResponse)
+        }
+        
+        return NextResponse.json({
+          message: mockResponse,
+          sessionId: currentSessionId,
+        })
+      }
     } else {
       console.log('🤖 Using real Anthropic API for Beatrice')
       
@@ -116,57 +212,129 @@ export async function POST(request: Request) {
         throw new Error('ANTHROPIC_API_KEY not properly configured')
       }
 
-      // Get conversation history for context
+      // Get conversation history for context with intelligent summarization
       const { data: history } = await supabase
         .from('chat_messages')
-        .select('role, content')
+        .select('role, content, created_at')
         .eq('session_id', currentSessionId)
         .order('created_at', { ascending: true })
-        .limit(20) // Keep last 20 messages for context
 
       // Convert messages to Claude format
-      const claudeMessages = (history || []).map(msg => ({
+      const rawMessages = (history || []).map(msg => ({
         role: msg.role as 'user' | 'assistant',
-        content: msg.content
+        content: msg.content,
+        created_at: msg.created_at
       }))
+
+      // Use context manager for optimized context
+      const claudeMessages = cacheSettings.enableContextCache
+        ? await contextManager.getOptimizedContext(currentSessionId, rawMessages)
+        : rawMessages.slice(-20) // Fallback to simple sliding window
 
       console.log('📤 Sending request to Anthropic with', claudeMessages.length, 'messages')
 
-      // Get response from Claude
-      const completion = await anthropic.messages.create({
-        model: 'claude-sonnet-4-20250514', // Updated to latest model
-        max_tokens: 500,
-        temperature: 0.7,
-        system: BEATRICE_SYSTEM_PROMPT,
-        messages: claudeMessages,
-      })
+      if (stream) {
+        // Use streaming API
+        const stream = await anthropic.messages.stream({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 500,
+          temperature: 0.7,
+          system: BEATRICE_SYSTEM_PROMPT,
+          messages: claudeMessages,
+        })
 
-      console.log('📥 Received response from Anthropic')
+        console.log('📥 Starting streaming response from Anthropic')
 
-      // Extract text from Claude's response
-      assistantMessage = completion.content[0].type === 'text' 
-        ? completion.content[0].text 
-        : 'I apologize, I had trouble understanding. Could you please rephrase?'
+        // Create a transform stream to convert Anthropic's stream to SSE format
+        const encoder = new TextEncoder()
+        let fullMessage = ''
+        
+        const readableStream = new ReadableStream({
+          async start(controller) {
+            try {
+              for await (const chunk of stream) {
+                if (chunk.type === 'content_block_delta' && chunk.delta.type === 'text_delta') {
+                  const text = chunk.delta.text
+                  fullMessage += text
+                  controller.enqueue(encoder.encode(`data: ${JSON.stringify({ text })}\n\n`))
+                }
+              }
+              
+              // Save the complete message after streaming is done
+              await supabase
+                .from('chat_messages')
+                .insert({
+                  session_id: currentSessionId,
+                  user_id: user.id,
+                  role: 'assistant',
+                  content: fullMessage,
+                })
+              
+              // Cache response if it matches common patterns
+              if (cacheSettings.enableResponseCache) {
+                await responseCache.cacheResponse(userMessage.content, fullMessage)
+              }
+              
+              // Send final message with session ID
+              controller.enqueue(encoder.encode(`data: ${JSON.stringify({ done: true, sessionId: currentSessionId })}\n\n`))
+              controller.close()
+              
+              console.log('✅ Streaming chat response successful')
+            } catch (error) {
+              controller.error(error)
+            }
+          }
+        })
+
+        return new Response(readableStream, {
+          headers: {
+            'Content-Type': 'text/event-stream',
+            'Cache-Control': 'no-cache',
+            'Connection': 'keep-alive',
+          },
+        })
+      } else {
+        // Non-streaming API (fallback)
+        const completion = await anthropic.messages.create({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 500,
+          temperature: 0.7,
+          system: BEATRICE_SYSTEM_PROMPT,
+          messages: claudeMessages,
+        })
+
+        console.log('📥 Received response from Anthropic')
+
+        // Extract text from Claude's response
+        const assistantMessage = completion.content[0].type === 'text' 
+          ? completion.content[0].text 
+          : 'I apologize, I had trouble understanding. Could you please rephrase?'
+
+        // Save assistant message
+        const { error: saveAssistantError } = await supabase
+          .from('chat_messages')
+          .insert({
+            session_id: currentSessionId,
+            user_id: user.id,
+            role: 'assistant',
+            content: assistantMessage,
+          })
+
+        if (saveAssistantError) throw saveAssistantError
+
+        // Cache response if it matches common patterns
+        if (cacheSettings.enableResponseCache) {
+          await responseCache.cacheResponse(userMessage.content, assistantMessage)
+        }
+
+        console.log('✅ Chat response successful')
+
+        return NextResponse.json({
+          message: assistantMessage,
+          sessionId: currentSessionId,
+        })
+      }
     }
-
-    // Save assistant message
-    const { error: saveAssistantError } = await supabase
-      .from('chat_messages')
-      .insert({
-        session_id: currentSessionId,
-        user_id: user.id,
-        role: 'assistant',
-        content: assistantMessage,
-      })
-
-    if (saveAssistantError) throw saveAssistantError
-
-    console.log('✅ Chat response successful')
-
-    return NextResponse.json({
-      message: assistantMessage,
-      sessionId: currentSessionId,
-    })
 
   } catch (error: any) {
     console.error('❌ Chat API error:', error)
