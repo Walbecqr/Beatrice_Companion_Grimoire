@@ -15,13 +15,24 @@ const detailedCache = new Map<string, MoonPhaseData>()
 let moonPhaseWorker: Worker | null = null
 
 function initializeWorker(): Worker {
+  try {
   if (!moonPhaseWorker && typeof Worker !== 'undefined') {
     moonPhaseWorker = new Worker('/workers/moon-phase-worker.js')
+      
+      // Add error handler
+      moonPhaseWorker.onerror = (error) => {
+        console.error('Moon phase worker error:', error);
+        moonPhaseWorker = null;
+      };
   }
   if (!moonPhaseWorker) {
     throw new Error('Web Workers are not supported in this environment');
   }
   return moonPhaseWorker;
+  } catch (error) {
+    console.error('Failed to initialize moon phase worker:', error);
+    throw error;
+  }
 }
 
 /**

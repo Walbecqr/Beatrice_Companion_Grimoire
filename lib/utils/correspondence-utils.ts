@@ -7,7 +7,18 @@ let correspondenceWorker: Worker | null = null
 function getWorker(): Worker {
   if (!correspondenceWorker && typeof Worker !== 'undefined') {
     try {
-    correspondenceWorker = new Worker('/workers/correspondence-worker.js')
+      correspondenceWorker = new Worker('/workers/correspondence-worker.js');
+      
+      // Add error handling
+      correspondenceWorker.onerror = (error) => {
+        console.error('Correspondence worker error:', error);
+        correspondenceWorker = null;
+      };
+      
+      // Add termination handling
+      if (typeof window !== 'undefined') {
+        window.addEventListener('beforeunload', cleanupWorker);
+      }
     } catch (error) {
       console.error('Failed to initialize correspondence worker:', error);
       throw new Error('Correspondence worker initialization failed');
