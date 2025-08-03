@@ -30,12 +30,17 @@
     "tailwindcss": "^3.4.17"
   },
   "devDependencies": {
+    "@eslint/js": "^9.32.0",
     "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-dom": "^18",
     "autoprefixer": "^10.4.17",
-    "eslint": "^8",
+    "eslint": "^8.57.1",
     "eslint-config-next": "14.0.4",
-    "typescript": "^5"
+    "eslint-plugin-react": "^7.37.5",
+    "globals": "^16.3.0",
+    "jiti": "^2.5.1",
+    "typescript": "^5",
+    "typescript-eslint": "^8.38.0"
   }
 }
