@@ -1,8 +1,8 @@
-import Fuse from 'fuse.js'
-import { Correspondence } from '@/types/correspondence'
+import Fuse, { IFuseOptions } from 'fuse.js'
+import { Correspondence } from '../../types/correspondence'
 
 // Search configuration for optimal performance and relevance
-const SEARCH_OPTIONS: Fuse.IFuseOptions<Correspondence> = {
+const SEARCH_OPTIONS: IFuseOptions<Correspondence> = {
   // Performance optimizations
   isCaseSensitive: false,
   includeScore: true,
@@ -36,7 +36,7 @@ const SEARCH_OPTIONS: Fuse.IFuseOptions<Correspondence> = {
 }
 
 // Cache for Fuse instances
-const fuseCache = new Map<string, Fuse<Correspondence>>()
+const fuseCache = new Map<string, CachedFuse>()
 const CACHE_TTL = 300000 // 5 minutes
 
 interface CachedFuse {
@@ -102,7 +102,7 @@ export class CorrespondenceSearch {
     return results.map(result => ({
       item: result.item,
       score: result.score || 0,
-      matches: result.matches || [],
+      matches: [...(result.matches || [])],
       refIndex: result.refIndex
     }))
   }
@@ -171,7 +171,7 @@ export class CorrespondenceSearch {
     
     const fieldOptions = {
       ...SEARCH_OPTIONS,
-      keys: [field]
+      keys: [{ name: field as keyof Correspondence, weight: 1 }]
     }
     
     const fieldFuse = new Fuse(this.data, fieldOptions)
@@ -180,7 +180,7 @@ export class CorrespondenceSearch {
     return results.map(result => ({
       item: result.item,
       score: result.score || 0,
-      matches: result.matches || [],
+      matches: [...(result.matches || [])],
       refIndex: result.refIndex
     }))
   }
@@ -253,11 +253,12 @@ export class CorrespondenceSearch {
    * Cache Fuse instance
    */
   private cacheFuse(dataHash: string, fuse: Fuse<Correspondence>): void {
-    fuseCache.set(dataHash, {
+    const cachedFuse: CachedFuse = {
       fuse,
       timestamp: Date.now(),
       dataHash
-    })
+    }
+    fuseCache.set(dataHash, cachedFuse)
     
     // Clean old cache entries
     this.cleanCache()
@@ -268,11 +269,11 @@ export class CorrespondenceSearch {
    */
   private cleanCache(): void {
     const now = Date.now()
-    for (const [key, cached] of fuseCache.entries()) {
+    fuseCache.forEach((cached, key) => {
       if (now - cached.timestamp > CACHE_TTL) {
         fuseCache.delete(key)
       }
-    }
+    })
   }
 
   /**
