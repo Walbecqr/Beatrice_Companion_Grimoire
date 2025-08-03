@@ -1,9 +1,6 @@
 'use client'
 
-// Enable ISR for grimoire - spell library can be cached as it's reference data
-export const revalidate = 3600 // Revalidate every hour
-
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Plus, Search, BookOpen, Sparkles, Scroll, Heart, Shield, Star, Brain, Filter, Gem } from 'lucide-react'
 import Link from 'next/link'
@@ -75,11 +72,7 @@ export default function GrimoirePage() {
   const [error, setError] = useState<string | null>(null)
   const supabase = createClient()
 
-  useEffect(() => {
-    fetchEntries()
-  }, [])
-
-  const fetchEntries = async () => {
+  const fetchEntries = useCallback(async () => {
     try {
       setError(null)
       const { data, error: fetchError } = await supabase
@@ -104,7 +97,11 @@ export default function GrimoirePage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [supabase])
+
+  useEffect(() => {
+    fetchEntries()
+  }, [fetchEntries])
 
   const filteredEntries = Array.isArray(entries) 
     ? entries.filter(entry => {

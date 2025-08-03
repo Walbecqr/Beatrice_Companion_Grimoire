@@ -74,7 +74,7 @@ export default function ChatSessionPage() {
     } finally {
       setLoading(false)
     }
-  }, [sessionId])
+  }, [sessionId, router, supabase])
 
   useEffect(() => {
     if (sessionId) {

@@ -3,6 +3,25 @@
 import Link, { LinkProps } from 'next/link'
 import { useSmartPrefetch } from '@/lib/hooks/use-smart-prefetch'
 import { ReactNode, MouseEvent, TouchEvent, useEffect, useRef } from 'react'
+import { 
+  MessageCircle, 
+  BookOpen, 
+  Moon, 
+  Sparkles, 
+  Hash,
+  Settings,
+  Heart
+} from 'lucide-react'
+
+const iconMap = {
+  MessageCircle,
+  BookOpen,
+  Moon,
+  Sparkles,
+  Hash,
+  Settings,
+  Heart
+} as const
 
 interface SmartLinkProps extends LinkProps {
   children: ReactNode
@@ -75,7 +94,7 @@ interface SmartNavCardProps {
   href: string
   title: string
   description: string
-  icon: React.ComponentType<{ className?: string }>
+  iconName: keyof typeof iconMap
   gradient: string
   className?: string
 }
@@ -84,10 +103,12 @@ export function SmartNavCard({
   href,
   title,
   description,
-  icon: Icon,
+  iconName,
   gradient,
   className = ''
 }: SmartNavCardProps) {
+  const Icon = iconMap[iconName]
+  
   return (
     <SmartLink 
       href={href}

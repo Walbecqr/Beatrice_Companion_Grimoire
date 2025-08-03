@@ -1,76 +1,65 @@
 import { Suspense } from 'react'
-import { 
-  MessageCircle, 
-  BookOpen, 
-  Moon, 
-  Sparkles, 
-  Calendar,
-  Hash,
-  Settings,
-  ArrowRight,
-  Heart
-} from 'lucide-react'
 import { fetchDashboardData } from '@/lib/utils/dashboard-data'
 import { DashboardStatsGrid, WeeklyStatsCard, MoonPhaseCard } from '@/components/dashboard/dashboard-stats'
 import { RecentActivityCard } from '@/components/dashboard/recent-activity'
 import { SmartNavCard } from '@/components/dashboard/prefetch-links'
 
-// Navigation cards data
+// Navigation cards data with icon names instead of components
 const navigationCards = [
   {
     href: '/dashboard/chat',
     title: 'Chat with Beatrice',
     description: 'Start a new spiritual conversation',
-    icon: MessageCircle,
+    iconName: 'MessageCircle' as const,
     gradient: 'from-purple-500 to-pink-500'
   },
   {
     href: '/dashboard/journal',
     title: 'Sacred Journal',
     description: 'Record your spiritual journey',
-    icon: BookOpen,
+    iconName: 'BookOpen' as const,
     gradient: 'from-blue-500 to-purple-500'
   },
   {
     href: '/dashboard/lunar-calendar',
     title: 'Lunar Calendar',
     description: 'Moon phases & celestial guidance',
-    icon: Moon,
+    iconName: 'Moon' as const,
     gradient: 'from-indigo-500 to-purple-500'
   },
   {
     href: '/dashboard/correspondences',
     title: 'Correspondences',
     description: 'Magical associations & meanings',
-    icon: Hash,
+    iconName: 'Hash' as const,
     gradient: 'from-green-500 to-teal-500'
   },
   {
     href: '/dashboard/rituals',
     title: 'Rituals',
     description: 'Create & track sacred practices',
-    icon: Sparkles,
+    iconName: 'Sparkles' as const,
     gradient: 'from-purple-500 to-indigo-500'
   },
   {
     href: '/dashboard/grimoire',
     title: 'Grimoire',
     description: 'Your personal book of shadows',
-    icon: BookOpen,
+    iconName: 'BookOpen' as const,
     gradient: 'from-amber-500 to-orange-500'
   },
   {
     href: '/dashboard/checkins',
     title: 'Energy Check-ins',
     description: 'Track your spiritual wellbeing',
-    icon: Heart,
+    iconName: 'Heart' as const,
     gradient: 'from-red-500 to-pink-500'
   },
   {
     href: '/dashboard/settings',
     title: 'Settings',
     description: 'Customize your experience',
-    icon: Settings,
+    iconName: 'Settings' as const,
     gradient: 'from-gray-500 to-gray-600'
   }
 ]
@@ -160,7 +149,7 @@ export default async function DashboardPage() {
                   href={card.href}
                   title={card.title}
                   description={card.description}
-                  icon={card.icon}
+                  iconName={card.iconName}
                   gradient={card.gradient}
                 />
               ))}
