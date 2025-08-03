@@ -105,7 +105,7 @@ export default function LunarCalendarError({
             Celestial Guidance:
           </p>
           <div className="text-xs text-gray-400 space-y-1">
-            <p>• The moon's cycles continue their eternal dance</p>
+            <p>• The moon&apos;s cycles continue their eternal dance</p>
             <p>• Cosmic alignments may need time to settle</p>
             <p>• Trust in the rhythm of the celestial spheres</p>
           </div>

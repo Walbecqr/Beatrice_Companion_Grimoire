@@ -51,7 +51,7 @@ export function DashboardStatsGrid({ stats }: DashboardStatsProps) {
 export function WeeklyStatsCard({ stats }: DashboardStatsProps) {
   return (
     <div className="card-mystical p-6">
-      <h3 className="text-lg font-semibold mb-4 text-gradient">This Week's Journey</h3>
+      <h3 className="text-lg font-semibold mb-4 text-gradient">This Week&apos;s Journey</h3>
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
