@@ -106,7 +106,6 @@ if (!response.ok) {
         content: data.message,
         created_at: new Date().toISOString(),
       }]);
-      setIsLoading(false)
     } catch (error: any) {
       console.error('Error sending message:', error);
       setIsLoading(false);
