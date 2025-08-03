@@ -22,8 +22,8 @@ interface PaginatedResult<T> {
   }
 }
 
-interface SortConfig {
-  field: keyof Correspondence
+interface SortConfig<T = any> {
+  field: keyof T
   direction: 'asc' | 'desc'
 }
 
@@ -33,12 +33,12 @@ interface SortConfig {
  */
 export class CursorPagination<T extends { id: string; created_at: string; updated_at: string }> {
   private data: T[]
-  private sortConfig: SortConfig
+  private sortConfig: SortConfig<T>
   private defaultLimit: number
 
   constructor(
     data: T[],
-    sortConfig: SortConfig = { field: 'created_at', direction: 'desc' },
+    sortConfig: SortConfig<T> = { field: 'created_at' as keyof T, direction: 'desc' },
     defaultLimit: number = 20
   ) {
     this.data = [...data] // Create a copy to avoid mutations
@@ -222,7 +222,7 @@ export class CursorPagination<T extends { id: string; created_at: string; update
    */
   private createCursor(item: T): string {
     const sortField = this.sortConfig.field
-    const sortValue = item[sortField]
+    const sortValue = (item as any)[sortField]
     
     // Create cursor with sort value and ID for uniqueness
     const cursorData = {
@@ -243,7 +243,7 @@ export class CursorPagination<T extends { id: string; created_at: string; update
       
       return this.data.findIndex(item => 
         item.id === cursorData.id && 
-        item[cursorData.field] === cursorData.value
+        (item as any)[cursorData.field] === cursorData.value
       )
     } catch {
       return -1
@@ -253,7 +253,7 @@ export class CursorPagination<T extends { id: string; created_at: string; update
   /**
    * Update sort configuration and re-sort
    */
-  updateSort(sortConfig: SortConfig): void {
+  updateSort(sortConfig: SortConfig<T>): void {
     this.sortConfig = sortConfig
     this.sortData()
   }
@@ -276,7 +276,7 @@ export class CursorPagination<T extends { id: string; created_at: string; update
   /**
    * Get current sort configuration
    */
-  getSortConfig(): SortConfig {
+  getSortConfig(): SortConfig<T> {
     return { ...this.sortConfig }
   }
 }
@@ -300,19 +300,19 @@ export function createCorrespondencePagination(
 /**
  * Hook for managing cursor pagination state in React components
  */
-export interface UseCursorPaginationParams<T> {
+export interface UseCursorPaginationParams<T extends { id: string; created_at: string; updated_at: string }> {
   data: T[]
-  sortConfig?: SortConfig
+  sortConfig?: SortConfig<T>
   defaultLimit?: number
 }
 
-export interface UseCursorPaginationReturn<T> {
+export interface UseCursorPaginationReturn<T extends { id: string; created_at: string; updated_at: string }> {
   currentPage: PaginatedResult<T>
   goToNextPage: () => void
   goToPreviousPage: () => void
   goToFirstPage: () => void
   goToPageAround: (itemId: string) => void
-  updateSort: (sortConfig: SortConfig) => void
+  updateSort: (sortConfig: SortConfig<T>) => void
   updateData: (newData: T[]) => void
   pagination: CursorPagination<T>
   isLoading: boolean
@@ -327,7 +327,7 @@ export function useCursorPagination<T extends { id: string; created_at: string; 
 ): UseCursorPaginationReturn<T> {
   const { 
     data, 
-    sortConfig = { field: 'created_at', direction: 'desc' },
+    sortConfig = { field: 'created_at' as keyof T, direction: 'desc' },
     defaultLimit = 20 
   } = params
 
@@ -372,7 +372,7 @@ export function useCursorPagination<T extends { id: string; created_at: string; 
     setCurrentPage(page)
   }, [paginationInstance])
 
-  const updateSort = useCallback((newSortConfig: SortConfig) => {
+  const updateSort = useCallback((newSortConfig: SortConfig<T>) => {
     paginationInstance.updateSort(newSortConfig)
     setCurrentPage(paginationInstance.getFirstPage())
   }, [paginationInstance])
