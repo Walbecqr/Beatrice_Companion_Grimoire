@@ -1,12 +1,14 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, FormEvent } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft, Save, Moon, Sparkles } from 'lucide-react'
 import { getMoonPhase } from '@/lib/utils/moon-phase'
+import { format } from 'date-fns'
 import { TagSelector } from '@/components/ui/tag-selector'
+import type { JournalEntry } from '@/types/beatrice'
 
 const MOODS = [
   'Peaceful', 'Anxious', 'Grateful', 'Empowered', 

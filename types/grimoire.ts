@@ -1,23 +1,9 @@
-// ✅ CORRECTED: GrimoireEntry interface that matches your actual database schema
-
+// Grimoire types and interfaces
 export interface GrimoireEntry {
   id: string
   user_id: string
-  
-  // Basic Information
-  title: string // NOT NULL
-  type: 'ritual' | 'spell' | 'chant' | 'blessing' | 'invocation' | 'meditation' | 'divination' | 'other' // NOT NULL, CHECK constraint
-  purpose: string | null
-  
-  // Content
-  ingredients: string[] | null // ARRAY type
-  instructions: string // NOT NULL
-  notes: string | null
-  source: string | null
-  
-  // Additional Fields
-  moon_phase_compatibility: string[] | null // ARRAY type
-  is_public: boolean // DEFAULT false
+  title: string
+  type: GrimoireEntryType // Using a specific type for better type safety
   category: string | null
   content: string | null // This exists but instructions is the main content field
   subcategory: string | null
@@ -80,6 +66,9 @@ export const GRIMOIRE_ENTRY_TYPES = [
   'divination',
   'other'
 ] as const
+
+// Type derived from the const array
+export type GrimoireEntryType = typeof GRIMOIRE_ENTRY_TYPES[number]
 
 // Type guard function
 export function isValidGrimoireType(type: string): type is GrimoireEntry['type'] {
