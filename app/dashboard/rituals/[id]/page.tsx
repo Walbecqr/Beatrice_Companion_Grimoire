@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, Save, Moon, Sparkles, Edit2, Trash2, Calendar, CheckCircle, Clock } from 'lucide-react';
+import { ArrowLeft, Save, Moon, Sparkles, Edit2, Trash2, Calendar, CheckCircle, Clock } from 'lucide-react'
 import { format } from 'date-fns'
 import { formatDetailDate } from '@/lib/utils/date-utils'
 
