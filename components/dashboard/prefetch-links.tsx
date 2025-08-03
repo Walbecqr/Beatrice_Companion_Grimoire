@@ -2,7 +2,7 @@
 
 import Link, { LinkProps } from 'next/link'
 import { useSmartPrefetch } from '@/lib/hooks/use-smart-prefetch'
-import { ReactNode, MouseEvent, TouchEvent } from 'react'
+import { ReactNode, MouseEvent, TouchEvent, useEffect, useRef } from 'react'
 
 interface SmartLinkProps extends LinkProps {
   children: ReactNode
@@ -26,17 +26,26 @@ export function SmartLink({
   ...linkProps 
 }: SmartLinkProps) {
   const { handleLinkHover } = useSmartPrefetch()
-  
+  const timeoutRef = useRef<NodeJS.Timeout>()
+
   const handleMouseEnter = (e: MouseEvent<HTMLAnchorElement>) => {
     if (prefetchOnHover && typeof linkProps.href === 'string') {
+      clearTimeout(timeoutRef.current)
       // Add a small delay to avoid prefetching on accidental hovers
-      setTimeout(() => {
+      timeoutRef.current = setTimeout(() => {
         handleLinkHover(linkProps.href as string)
       }, prefetchDelay)
     }
-    
+
     onMouseEnter?.(e)
   }
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      clearTimeout(timeoutRef.current)
+    }
+  }, [])
 
   const handleTouchStart = (e: TouchEvent<HTMLAnchorElement>) => {
     // On touch devices, prefetch immediately on touch

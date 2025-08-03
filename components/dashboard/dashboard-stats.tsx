@@ -32,8 +32,9 @@ export function DashboardStatsGrid({ stats }: DashboardStatsProps) {
           <Moon className="w-6 h-6 text-indigo-400" />
         </div>
         <div className="text-lg font-bold text-gradient capitalize">{stats.currentMoonPhase.phase}</div>
-        <div className="text-xs text-gray-400">{Math.round(stats.currentMoonPhase.illumination)}% Illuminated</div>
-      </div>
+        <div className="text-xs text-gray-400">
+          {Math.round(stats.currentMoonPhase?.illumination ?? 0)}% Illuminated
+        </div>      </div>
 
       {/* Weekly Activity */}
       <div className="card-mystical p-4 text-center">
@@ -104,11 +105,6 @@ export function MoonPhaseCard({ stats }: DashboardStatsProps) {
         <div className="text-xl font-bold text-gradient capitalize">{currentMoonPhase.phase} Moon</div>
         <div className="text-sm text-gray-400">{Math.round(currentMoonPhase.illumination)}% Illuminated</div>
         
-        {currentMoonPhase.daysUntilNext > 0 && (
-          <div className="text-xs text-purple-300">
-            {currentMoonPhase.nextPhase} in {currentMoonPhase.daysUntilNext} day{currentMoonPhase.daysUntilNext !== 1 ? 's' : ''}
-          </div>
-        )}
       </div>
     </div>
   )

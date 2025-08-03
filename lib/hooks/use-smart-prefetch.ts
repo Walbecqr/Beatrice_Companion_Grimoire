@@ -92,9 +92,9 @@ export function useSmartPrefetch() {
       }
     } catch (error) {
       console.warn('Failed to load navigation patterns:', error)
+      navigationHistory.current = []
     }
   }, [])
-
   // Save navigation patterns to localStorage
   const saveNavigationPatterns = () => {
     try {

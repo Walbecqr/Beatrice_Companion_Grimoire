@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/client'
-import { getMoonPhase } from '@/lib/utils/moon-phase'
+import { getMoonPhaseDetailed } from '@/lib/utils/moon-phase'
 
 export interface DashboardStats {
   totalJournalEntries: number
@@ -9,8 +9,8 @@ export interface DashboardStats {
   currentMoonPhase: {
     phase: string
     illumination: number
-    nextPhase: string
-    daysUntilNext: number
+    emoji: string
+    moonAge: number
   }
   weeklyStats: {
     journalEntries: number
@@ -102,8 +102,10 @@ export async function fetchDashboardData(): Promise<DashboardStats> {
           id: entry.id,
           type: 'journal',
           title: entry.title || 'Untitled Entry',
-          description: entry.content.substring(0, 100) + '...',
-          timestamp: entry.created_at,
+          description: entry.content
+            ? entry.content.substring(0, Math.min(entry.content.length, 100))
+              + (entry.content.length > 100 ? '...' : '')
+            : '',          timestamp: entry.created_at,
           href: `/dashboard/journal/${entry.id}`
         })
       })
@@ -141,7 +143,7 @@ export async function fetchDashboardData(): Promise<DashboardStats> {
     recentActivity.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
 
     // Get current moon phase
-    const moonPhase = getMoonPhase(now)
+    const moonPhase = getMoonPhaseDetailed(now)
     
     return {
       totalJournalEntries: journalStats.count || 0,
@@ -151,8 +153,8 @@ export async function fetchDashboardData(): Promise<DashboardStats> {
       currentMoonPhase: {
         phase: moonPhase.phase,
         illumination: moonPhase.illumination,
-        nextPhase: moonPhase.nextPhase?.name || 'Unknown',
-        daysUntilNext: moonPhase.nextPhase?.daysUntil || 0
+        emoji: moonPhase.emoji,
+        moonAge: moonPhase.moonAge
       },
       weeklyStats: {
         journalEntries: weeklyJournalCount.count || 0,
@@ -164,7 +166,7 @@ export async function fetchDashboardData(): Promise<DashboardStats> {
     console.error('Error fetching dashboard data:', error)
     
     // Return fallback data
-    const moonPhase = getMoonPhase(now)
+    const moonPhase = getMoonPhaseDetailed(now)
     return {
       totalJournalEntries: 0,
       totalCorrespondences: 0,
@@ -173,8 +175,8 @@ export async function fetchDashboardData(): Promise<DashboardStats> {
       currentMoonPhase: {
         phase: moonPhase.phase,
         illumination: moonPhase.illumination,
-        nextPhase: moonPhase.nextPhase?.name || 'Unknown',
-        daysUntilNext: moonPhase.nextPhase?.daysUntil || 0
+        emoji: moonPhase.emoji,
+        moonAge: moonPhase.moonAge
       },
       weeklyStats: {
         journalEntries: 0,
@@ -239,7 +241,7 @@ export async function prefetchCommonRoutes() {
         .limit(20),
       
       // Prefetch moon phase data for lunar calendar
-      Promise.resolve(getMoonPhase(new Date()))
+      Promise.resolve(getMoonPhaseDetailed(new Date()))
     ])
     
     return true

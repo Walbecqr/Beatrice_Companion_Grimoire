@@ -1,6 +1,3 @@
-// Enable ISR for correspondences - revalidate every hour since correspondences don't change frequently
-export const revalidate = 3600
-
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'

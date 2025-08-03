@@ -20,19 +20,23 @@ export function AnalyticsDashboard() {
   }
 
   const handleExport = () => {
-    const data = exportAnalytics()
-    if (data) {
-      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `beatrice-analytics-${new Date().toISOString().split('T')[0]}.json`
-      a.click()
-      URL.revokeObjectURL(url)
+    try {
+      const data = exportAnalytics()
+      if (data) {
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = `beatrice-analytics-${new Date().toISOString().split('T')[0]}.json`
+        a.click()
+        setTimeout(() => URL.revokeObjectURL(url), 100)
+      }
+      setShowExportModal(false)
+    } catch (error) {
+      console.error('Failed to export analytics:', error)
+      // Optionally show an error message to the user
     }
-    setShowExportModal(false)
   }
-
   if (!analytics || !summary) {
     return (
       <div className="card-mystical p-6 text-center">
