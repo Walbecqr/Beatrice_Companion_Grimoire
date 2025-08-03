@@ -3,12 +3,16 @@
 
 // Advanced astronomical calculation functions
 function calculatePreciseJulianDate(date) {
-  const year = date.getFullYear()
-  const month = date.getMonth() + 1
-  const day = date.getDate()
-  const hour = date.getHours()
-  const minute = date.getMinutes()
-  const second = date.getSeconds()
+  try {
+    if (!(date instanceof Date)) {
+      date = new Date(date);
+    }
+    const year = date.getFullYear()
+    const month = date.getMonth() + 1
+    const day = date.getDate()
+    const hour = date.getHours()
+    const minute = date.getMinutes()
+    const second = date.getSeconds()
   
   // More precise Julian date calculation
   let a = Math.floor((14 - month) / 12)
@@ -21,6 +25,10 @@ function calculatePreciseJulianDate(date) {
   let dayFraction = (hour - 12) / 24 + minute / 1440 + second / 86400
   
   return jdn + dayFraction
+  } catch (error) {
+    console.error('Error calculating Julian date:', error)
+    throw new Error('Invalid date provided for Julian date calculation')
+  }
 }
 
 function calculateMoonAge(julianDate) {
@@ -50,7 +58,7 @@ function calculateMoonPhase(moonAge) {
     { name: 'Full Moon', emoji: '🌕', min: 12.91963, max: 16.61096 },
     { name: 'Waning Gibbous', emoji: '🌖', min: 16.61096, max: 20.30228 },
     { name: 'Last Quarter', emoji: '🌗', min: 20.30228, max: 23.99361 },
-    { name: 'Waning Crescent', emoji: '🌘', min: 23.99361, max: 27.68493 },
+    { name: 'Waning Crescent', emoji: '🌘', min: 23.99361, max: 29.530589 }
   ]
   
   for (const phase of phases) {

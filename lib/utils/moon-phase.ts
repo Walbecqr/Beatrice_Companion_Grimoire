@@ -18,7 +18,10 @@ function initializeWorker(): Worker {
   if (!moonPhaseWorker && typeof Worker !== 'undefined') {
     moonPhaseWorker = new Worker('/workers/moon-phase-worker.js')
   }
-  return moonPhaseWorker!
+  if (!moonPhaseWorker) {
+    throw new Error('Web Workers are not supported in this environment');
+  }
+  return moonPhaseWorker;
 }
 
 /**

@@ -15,32 +15,29 @@ export function safeFormatDate(
   fallback: string = 'Date not available'
 ): string {
   if (!dateValue) {
-    return fallback
+    return fallback;
   }
-
   try {
-    let date: Date
-
-    // Handle different input types
+    let date: Date;
     if (typeof dateValue === 'string') {
-      // Try parsing as ISO string first, then as regular Date
-      date = dateValue.includes('T') ? parseISO(dateValue) : new Date(dateValue)
+      // Handle invalid date strings
+      if (!dateValue.match(/^\d{4}-\d{2}-\d{2}/) && !Date.parse(dateValue)) {
+        return fallback;
+      }
+      date = dateValue.includes('T') ? parseISO(dateValue) : new Date(dateValue);
     } else if (dateValue instanceof Date) {
-      date = dateValue
+      date = dateValue;
     } else {
-      return fallback
+      return fallback;
     }
-
-    // Check if the date is valid
     if (!isValid(date)) {
-      console.warn('Invalid date value:', dateValue)
-      return fallback
+      console.warn('Invalid date value:', dateValue);
+      return fallback;
     }
-
-    return format(date, formatStr)
+    return format(date, formatStr);
   } catch (error) {
-    console.error('Date formatting error:', error, 'Value:', dateValue)
-    return fallback
+    console.error('Date formatting error:', error, 'Value:', dateValue);
+    return fallback;
   }
 }
 
@@ -97,31 +94,39 @@ export function safeFormatRelativeDate(
  * @param dateValue - Date string, Date object, or potentially invalid value
  * @returns boolean indicating if the date is valid
  */
-export function isValidDate(dateValue: string | Date | null | undefined): boolean {
-  if (!dateValue) return false
+export function isValidDateValue(
+  dateValue: string | Date | null | undefined
+): boolean {
+  if (!dateValue) return false;
 
   try {
-    let date: Date
-
+    let date: Date;
     if (typeof dateValue === 'string') {
-      date = dateValue.includes('T') ? parseISO(dateValue) : new Date(dateValue)
+      date = dateValue.includes('T') ? parseISO(dateValue) : new Date(dateValue);
     } else if (dateValue instanceof Date) {
-      date = dateValue
+      date = dateValue;
     } else {
-      return false
+      return false;
     }
-
-    return isValid(date)
+    return isValid(date);
   } catch {
-    return false
+    return false;
   }
 }
-
 /**
- * Format date for display in cards/lists
- * @param dateValue - Date to format
- * @returns Short formatted date
+ * Get start of day for a date value
+ * @param dateValue - Date string or Date object
+ * @returns Date object set to start of day or null if invalid
  */
+export function getStartOfDay(dateValue: string | Date): Date | null {
+  try {
+    const date = typeof dateValue === 'string' ? new Date(dateValue) : dateValue;
+    if (!isValid(date)) return null;
+    return new Date(date.setHours(0, 0, 0, 0));
+  } catch {
+    return null;
+  }
+}
 export function formatCardDate(dateValue: string | Date | null | undefined): string {
   return safeFormatDate(dateValue, 'MMM d, yyyy', 'No date')
 }

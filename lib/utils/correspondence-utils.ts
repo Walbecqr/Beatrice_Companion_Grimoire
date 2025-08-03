@@ -6,11 +6,18 @@ let correspondenceWorker: Worker | null = null
 
 function getWorker(): Worker {
   if (!correspondenceWorker && typeof Worker !== 'undefined') {
+    try {
     correspondenceWorker = new Worker('/workers/correspondence-worker.js')
+    } catch (error) {
+      console.error('Failed to initialize correspondence worker:', error);
+      throw new Error('Correspondence worker initialization failed');
   }
-  return correspondenceWorker!
 }
-
+  if (!correspondenceWorker) {
+    throw new Error('Web Workers are not supported in this environment');
+  }
+  return correspondenceWorker;
+}
 // Worker operation counter for request tracking
 let operationCounter = 0
 
@@ -95,9 +102,11 @@ export function filterCorrespondences(
     element?: string
     energy?: 'masculine' | 'feminine'
     planet?: string
+    properties?: string[]
     property?: string
     personalOnly?: boolean
     favoritesOnly?: boolean
+    verifiedOnly?: boolean
   }
 ): Correspondence[] {
   return correspondences.filter(correspondence => {
@@ -132,14 +141,25 @@ export function filterCorrespondences(
     // Planet filter
     if (filters.planet && correspondence.planet !== filters.planet) return false
 
-    // Property filter
+    // Property filter (single property)
     if (filters.property && !correspondence.magical_properties.includes(filters.property)) return false
+
+    // Properties filter (multiple properties)
+    if (filters.properties && filters.properties.length > 0) {
+      const hasAllProperties = filters.properties.every(prop => 
+        correspondence.magical_properties.includes(prop)
+      )
+      if (!hasAllProperties) return false
+    }
 
     // Personal filter
     if (filters.personalOnly && !correspondence.is_personal) return false
 
     // Favorites filter
     if (filters.favoritesOnly && !correspondence.is_favorited) return false
+
+    // Verified filter
+    if (filters.verifiedOnly && !correspondence.verified) return false
 
     return true
   })
@@ -609,16 +629,23 @@ export async function prepareBulkExportAsync(
  */
 export function cleanupWorker(): void {
   if (correspondenceWorker) {
-    // Clear pending operations
-    for (const operation of pendingOperations.values()) {
-      clearTimeout(operation.timeout)
-      operation.reject(new Error('Worker cleanup'))
-    }
-    pendingOperations.clear()
-    
-    // Terminate worker
-    correspondenceWorker.terminate()
-    correspondenceWorker = null
+    // Clear pending operations with timeout
+    const clearTimeoutId = setTimeout(() => {
+      for (const operation of pendingOperations.values()) {
+        clearTimeout(operation.timeout);
+        operation.reject(new Error('Worker cleanup timeout'));
+      }
+      pendingOperations.clear();
+      
+      // Terminate worker and cleanup resources
+      correspondenceWorker!.terminate();
+      correspondenceWorker = null;
+      
+      // Clear any cached data
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('beforeunload', cleanupWorker);
+      }
+    }, 100);
   }
 }
 
