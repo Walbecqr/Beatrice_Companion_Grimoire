@@ -110,23 +110,25 @@ export async function POST(request: Request) {
         .select('role, content')
         .eq('session_id', currentSessionId)
         .order('created_at', { ascending: true })
-        .limit(20) // Keep last 20 messages for context
-
-      // Convert messages to Claude format
-      const claudeMessages = (history || []).map(msg => ({
+        .limit(10) // Reduced from 20 to 10 for better context management
+      // Convert messages to Claude format and ensure proper structure
+      const claudeMessages = history?.map(msg => ({
         role: msg.role as 'user' | 'assistant',
         content: msg.content
-      }))
-
+      })) || []
+      // Add the new user message to the context
+      claudeMessages.push({
+        role: 'user',
+        content: userMessage.content
+      })
       // Get response from Claude
       const completion = await anthropic.messages.create({
-        model: 'claude-3-haiku-20240307', // Fast and affordable model
+        model: 'claude-3-haiku-20240307',
         max_tokens: 500,
         temperature: 0.7,
         system: BEATRICE_SYSTEM_PROMPT,
         messages: claudeMessages,
       })
-
       // Extract text from Claude's response
       assistantMessage = completion.content[0].type === 'text' 
         ? completion.content[0].text 

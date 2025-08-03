@@ -92,23 +92,25 @@ export default function ChatInterface({
         }),
       })
 
-      if (!response.ok) throw new Error('Failed to send message')
-
-      const data = await response.json()
-
+if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Failed to send message');
+      }
+      const data = await response.json();
+      if (!data.message) {
+        throw new Error('Invalid response from server');
+      }
       // Add Beatrice's response
       setMessages(prev => [...prev, {
         role: 'assistant',
         content: data.message,
         created_at: new Date().toISOString(),
-      }])
-    } catch (error) {
-      console.error('Error sending message:', error)
-      // Remove the user message if there was an error
-      setMessages(prev => prev.slice(0, -1))
-      alert('Failed to send message. Please try again.')
-    } finally {
+      }]);
       setIsLoading(false)
+    } catch (error: any) {
+      console.error('Error sending message:', error);
+      setIsLoading(false);
+      // Optionally, display an error message to the user
     }
   }
 
