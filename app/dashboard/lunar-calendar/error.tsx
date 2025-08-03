@@ -126,7 +126,7 @@ export default function LunarCalendarError({
       {/* Mystical Quote */}
       <div className="text-center">
         <p className="text-xs text-gray-500 italic">
-          "Even when clouds obscure her face, the moon continues her sacred journey."
+&ldquo;Even when clouds obscure her face, the moon continues her sacred journey.&rdquo;
         </p>
       </div>
     </div>

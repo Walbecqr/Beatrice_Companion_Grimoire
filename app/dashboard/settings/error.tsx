@@ -126,7 +126,7 @@ export default function SettingsError({
       {/* Mystical Quote */}
       <div className="text-center">
         <p className="text-xs text-gray-500 italic">
-          "True harmony comes from within. Your essence transcends any configuration."
+&ldquo;True harmony comes from within. Your essence transcends any configuration.&rdquo;
         </p>
       </div>
     </div>

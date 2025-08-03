@@ -126,7 +126,7 @@ export default function CorrespondencesError({
       {/* Mystical Quote */}
       <div className="text-center">
         <p className="text-xs text-gray-500 italic">
-          "Knowledge persists beyond temporary veils. The wisdom you seek awaits your return."
+&ldquo;Knowledge persists beyond temporary veils. The wisdom you seek awaits your return.&rdquo;
         </p>
       </div>
     </div>

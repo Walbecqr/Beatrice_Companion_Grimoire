@@ -126,7 +126,7 @@ export default function CorrespondenceDetailError({
       {/* Mystical Quote */}
       <div className="text-center">
         <p className="text-xs text-gray-500 italic">
-          "When one door closes, the universe opens another. Seek and you shall find."
+&ldquo;When one door closes, the universe opens another. Seek and you shall find.&rdquo;
         </p>
       </div>
     </div>

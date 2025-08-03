@@ -105,7 +105,7 @@ export default function DashboardError({
 
         {/* Mystical Footer */}
         <div className="text-xs text-gray-500 italic">
-          "Even in darkness, the stars continue to shine. This too shall pass."
+&ldquo;Even in darkness, the stars continue to shine. This too shall pass.&rdquo;
         </div>
       </div>
     </div>

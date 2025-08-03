@@ -126,7 +126,7 @@ export default function GrimoireError({
       {/* Mystical Quote */}
       <div className="text-center">
         <p className="text-xs text-gray-500 italic">
-          "Even the most powerful spells sometimes need a moment to gather their energy."
+&ldquo;Even the most powerful spells sometimes need a moment to gather their energy.&rdquo;
         </p>
       </div>
     </div>

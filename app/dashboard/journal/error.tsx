@@ -126,7 +126,7 @@ export default function JournalError({
       {/* Mystical Quote */}
       <div className="text-center">
         <p className="text-xs text-gray-500 italic">
-          "Your thoughts and reflections are sacred. They await your return with patience."
+&ldquo;Your thoughts and reflections are sacred. They await your return with patience.&rdquo;
         </p>
       </div>
     </div>

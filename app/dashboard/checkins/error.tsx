@@ -126,7 +126,7 @@ export default function CheckInsError({
       {/* Mystical Quote */}
       <div className="text-center">
         <p className="text-xs text-gray-500 italic">
-          "Your wellness is a journey, not a destination. Every step forward matters."
+&ldquo;Your wellness is a journey, not a destination. Every step forward matters.&rdquo;
         </p>
       </div>
     </div>

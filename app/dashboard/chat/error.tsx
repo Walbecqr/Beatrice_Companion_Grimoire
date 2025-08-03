@@ -132,7 +132,7 @@ export default function ChatError({
       {/* Mystical Quote */}
       <div className="p-4 border-t border-gray-800 text-center">
         <p className="text-xs text-gray-500 italic">
-          "In silence, the soul speaks loudest. Even when words fail, the spirit endures."
+&ldquo;In silence, the soul speaks loudest. Even when words fail, the spirit endures.&rdquo;
         </p>
       </div>
     </div>

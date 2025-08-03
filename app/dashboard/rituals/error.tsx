@@ -126,7 +126,7 @@ export default function RitualsError({
       {/* Mystical Quote */}
       <div className="text-center">
         <p className="text-xs text-gray-500 italic">
-          "Even when the flames dim, the sacred fire within burns eternal."
+&ldquo;Even when the flames dim, the sacred fire within burns eternal.&rdquo;
         </p>
       </div>
     </div>
