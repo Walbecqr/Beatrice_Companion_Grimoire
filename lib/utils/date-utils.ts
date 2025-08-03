@@ -1,16 +1,23 @@
-import { format, formatDistance, formatRelative, formatDistanceToNow } from 'date-fns'
-export function formatDetailDate(date: string | Date): string {
-  const dateObj = typeof date === 'string' ? new Date(date) : date
-  return format(dateObj, 'PPpp') // Format: Apr 29, 2021, 1:25:50 PM
-}
-export function formatRelativeDate(date: string | Date): string {
-  const dateObj = typeof date === 'string' ? new Date(date) : date
-  return formatRelative(dateObj, new Date())
-}
-export function formatTimeAgo(date: string | Date): string {
-  const dateObj = typeof date === 'string' ? new Date(date) : date
-  return formatDistanceToNow(dateObj, { addSuffix: true })
+// lib/utils/date-utils.ts - Safe date formatting utilities
+
+import { format, isValid, parseISO } from 'date-fns'
+
+/**
+ * Safely formats a date value with fallback handling
+ * @param dateValue - Date string, Date object, or potentially invalid value
+ * @param formatStr - date-fns format string (default: 'PPp')
+ * @param fallback - Fallback text when date is invalid
+ * @returns Formatted date string or fallback
+ */
+export function safeFormatDate(
+  dateValue: string | Date | null | undefined,
+  formatStr: string = 'PPp',
+  fallback: string = 'Date not available'
+): string {
+  if (!dateValue) {
+    return fallback
   }
+
   try {
     let date: Date
 
@@ -86,16 +93,7 @@ export function safeFormatRelativeDate(
 }
 
 /**
-/**
  * Checks if a date value is valid
- * @param dateValue - Date string, Date object, or potentially invalid value
- * @returns boolean indicating if the date is valid
- */
-export function isValid(dateValue: string | Date | null | undefined): boolean {
-  if (!dateValue) return false;
-  const date = typeof dateValue === 'string' ? new Date(dateValue) : dateValue;
-  return date instanceof Date && !isNaN(date.getTime());
-}
  * @param dateValue - Date string, Date object, or potentially invalid value
  * @returns boolean indicating if the date is valid
  */
