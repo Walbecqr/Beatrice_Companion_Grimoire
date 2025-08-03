@@ -1,6 +1,5 @@
 'use client'
 
-import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { 
   Home, 
@@ -15,6 +14,7 @@ import {
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
+import { SmartSidebarLink } from '@/components/dashboard/prefetch-links'
 
 const navItems = [
   { href: '/dashboard', icon: Home, label: 'Dashboard' },
@@ -55,19 +55,12 @@ export function Sidebar() {
               (item.href !== '/dashboard' && pathname.startsWith(item.href))
             return (
               <li key={item.href}>
-                <Link
+                <SmartSidebarLink
                   href={item.href}
-                  className={`
-                    flex items-center space-x-3 px-4 py-3 rounded-lg transition-all duration-200
-                    ${isActive 
-                      ? 'bg-purple-600/20 text-purple-300 border border-purple-500/30' 
-                      : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800/50'
-                    }
-                  `}
-                >
-                  <item.icon className="w-5 h-5" />
-                  <span>{item.label}</span>
-                </Link>
+                  icon={item.icon}
+                  label={item.label}
+                  isActive={isActive}
+                />
               </li>
             )
           })}

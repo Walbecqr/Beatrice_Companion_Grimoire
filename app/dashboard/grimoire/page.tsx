@@ -1,3 +1,6 @@
+// Enable ISR for grimoire - spell library can be cached as it's reference data
+export const revalidate = 3600 // Revalidate every hour
+
 'use client'
 
 import { useState, useEffect } from 'react'

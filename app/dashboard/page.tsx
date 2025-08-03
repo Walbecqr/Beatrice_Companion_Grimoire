@@ -1,6 +1,4 @@
-'use client'
-
-import Link from 'next/link'
+import { Suspense } from 'react'
 import { 
   MessageCircle, 
   BookOpen, 
@@ -12,8 +10,130 @@ import {
   ArrowRight,
   Heart
 } from 'lucide-react'
+import { fetchDashboardData } from '@/lib/utils/dashboard-data'
+import { DashboardStatsGrid, WeeklyStatsCard, MoonPhaseCard } from '@/components/dashboard/dashboard-stats'
+import { RecentActivityCard } from '@/components/dashboard/recent-activity'
+import { SmartNavCard } from '@/components/dashboard/prefetch-links'
 
-export default function DashboardPage() {
+// Navigation cards data
+const navigationCards = [
+  {
+    href: '/dashboard/chat',
+    title: 'Chat with Beatrice',
+    description: 'Start a new spiritual conversation',
+    icon: MessageCircle,
+    gradient: 'from-purple-500 to-pink-500'
+  },
+  {
+    href: '/dashboard/journal',
+    title: 'Sacred Journal',
+    description: 'Record your spiritual journey',
+    icon: BookOpen,
+    gradient: 'from-blue-500 to-purple-500'
+  },
+  {
+    href: '/dashboard/lunar-calendar',
+    title: 'Lunar Calendar',
+    description: 'Moon phases & celestial guidance',
+    icon: Moon,
+    gradient: 'from-indigo-500 to-purple-500'
+  },
+  {
+    href: '/dashboard/correspondences',
+    title: 'Correspondences',
+    description: 'Magical associations & meanings',
+    icon: Hash,
+    gradient: 'from-green-500 to-teal-500'
+  },
+  {
+    href: '/dashboard/rituals',
+    title: 'Rituals',
+    description: 'Create & track sacred practices',
+    icon: Sparkles,
+    gradient: 'from-purple-500 to-indigo-500'
+  },
+  {
+    href: '/dashboard/grimoire',
+    title: 'Grimoire',
+    description: 'Your personal book of shadows',
+    icon: BookOpen,
+    gradient: 'from-amber-500 to-orange-500'
+  },
+  {
+    href: '/dashboard/checkins',
+    title: 'Energy Check-ins',
+    description: 'Track your spiritual wellbeing',
+    icon: Heart,
+    gradient: 'from-red-500 to-pink-500'
+  },
+  {
+    href: '/dashboard/settings',
+    title: 'Settings',
+    description: 'Customize your experience',
+    icon: Settings,
+    gradient: 'from-gray-500 to-gray-600'
+  }
+]
+
+// Loading components for Suspense boundaries
+function StatsLoading() {
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      {[1, 2, 3, 4].map((i) => (
+        <div key={i} className="card-mystical p-4 text-center animate-pulse">
+          <div className="w-12 h-12 bg-purple-600/30 rounded-full mx-auto mb-3" />
+          <div className="w-16 h-6 bg-purple-600/30 rounded mx-auto mb-2" />
+          <div className="w-20 h-4 bg-purple-600/20 rounded mx-auto" />
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function ActivityLoading() {
+  return (
+    <div className="card-mystical p-6">
+      <div className="w-32 h-6 bg-purple-600/30 rounded animate-pulse mb-4" />
+      <div className="space-y-3">
+        {[1, 2, 3].map((i) => (
+          <div key={i} className="flex items-center space-x-3 p-3 animate-pulse">
+            <div className="w-8 h-8 bg-purple-600/30 rounded-full" />
+            <div className="flex-1 space-y-2">
+              <div className="w-32 h-4 bg-purple-600/30 rounded" />
+              <div className="w-48 h-3 bg-purple-600/20 rounded" />
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// Server component for dashboard stats
+async function DashboardStats() {
+  const stats = await fetchDashboardData()
+  return <DashboardStatsGrid stats={stats} />
+}
+
+// Server component for recent activity
+async function RecentActivity() {
+  const stats = await fetchDashboardData()
+  return <RecentActivityCard activities={stats.recentActivity} />
+}
+
+// Server component for sidebar stats
+async function SidebarStats() {
+  const stats = await fetchDashboardData()
+  
+  return (
+    <div className="space-y-6">
+      <MoonPhaseCard stats={stats} />
+      <WeeklyStatsCard stats={stats} />
+    </div>
+  )
+}
+
+export default async function DashboardPage() {
   return (
     <div className="space-y-8">
       {/* Welcome Section */}
@@ -22,144 +142,64 @@ export default function DashboardPage() {
         <p className="text-gray-400">Welcome to your mystical companion</p>
       </div>
 
-      {/* Primary Actions Grid */}
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {/* Chat with Beatrice Card */}
-        <Link href="/dashboard/chat" className="card-mystical p-6 hover:bg-gray-800/70 transition-colors group">
-          <div className="flex items-center space-x-4">
-            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center group-hover:scale-105 transition-transform">
-              <MessageCircle className="w-6 h-6 text-white" />
-            </div>
-            <div className="flex-1">
-              <h3 className="text-lg font-semibold mb-1">Chat with Beatrice</h3>
-              <p className="text-gray-400 text-sm">Start a new spiritual conversation</p>
-            </div>
-            <div className="text-purple-400 group-hover:translate-x-1 transition-transform">
-              <ArrowRight className="w-5 h-5" />
+      {/* Dashboard Stats */}
+      <Suspense fallback={<StatsLoading />}>
+        <DashboardStats />
+      </Suspense>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Main Content */}
+        <div className="lg:col-span-2 space-y-8">
+          {/* Primary Actions Grid */}
+          <div>
+            <h2 className="text-xl font-semibold mb-4">Quick Actions</h2>
+            <div className="grid gap-4 md:grid-cols-2">
+              {navigationCards.map((card) => (
+                <SmartNavCard
+                  key={card.href}
+                  href={card.href}
+                  title={card.title}
+                  description={card.description}
+                  icon={card.icon}
+                  gradient={card.gradient}
+                />
+              ))}
             </div>
           </div>
-        </Link>
 
-        {/* Sacred Journal Card */}
-        <Link href="/dashboard/journal" className="card-mystical p-6 hover:bg-gray-800/70 transition-colors group">
-          <div className="flex items-center space-x-4">
-            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center group-hover:scale-105 transition-transform">
-              <BookOpen className="w-6 h-6 text-white" />
-            </div>
-            <div className="flex-1">
-              <h3 className="text-lg font-semibold mb-1">Sacred Journal</h3>
-              <p className="text-gray-400 text-sm">Record your spiritual journey</p>
-            </div>
-            <div className="text-purple-400 group-hover:translate-x-1 transition-transform">
-              <ArrowRight className="w-5 h-5" />
-            </div>
+          {/* Recent Activity */}
+          <div>
+            <h2 className="text-xl font-semibold mb-4">Recent Activity</h2>
+            <Suspense fallback={<ActivityLoading />}>
+              <RecentActivity />
+            </Suspense>
           </div>
-        </Link>
+        </div>
 
-        {/* Lunar Calendar Card */}
-        <Link href="/dashboard/lunar-calendar" className="card-mystical p-6 hover:bg-gray-800/70 transition-colors group">
-          <div className="flex items-center space-x-4">
-            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center group-hover:scale-105 transition-transform">
-              <Moon className="w-6 h-6 text-white" />
+        {/* Sidebar */}
+        <div className="lg:col-span-1">
+          <Suspense fallback={
+            <div className="space-y-6">
+              <div className="card-mystical p-6 animate-pulse">
+                <div className="w-32 h-6 bg-purple-600/30 rounded mb-4" />
+                <div className="w-20 h-20 bg-purple-600/20 rounded-full mx-auto mb-4" />
+                <div className="w-24 h-4 bg-purple-600/30 rounded mx-auto" />
+              </div>
+              <div className="card-mystical p-6 animate-pulse">
+                <div className="w-36 h-6 bg-purple-600/30 rounded mb-4" />
+                <div className="space-y-3">
+                  {[1, 2, 3].map((i) => (
+                    <div key={i} className="flex justify-between">
+                      <div className="w-20 h-4 bg-purple-600/20 rounded" />
+                      <div className="w-8 h-4 bg-purple-600/30 rounded" />
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
-            <div className="flex-1">
-              <h3 className="text-lg font-semibold mb-1">Lunar Calendar</h3>
-              <p className="text-gray-400 text-sm">Moon phases & celestial guidance</p>
-            </div>
-            <div className="text-purple-400 group-hover:translate-x-1 transition-transform">
-              <ArrowRight className="w-5 h-5" />
-            </div>
-          </div>
-        </Link>
-
-        {/* Correspondences Card */}
-        <Link href="/dashboard/correspondences" className="card-mystical p-6 hover:bg-gray-800/70 transition-colors group">
-          <div className="flex items-center space-x-4">
-            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-green-500 to-teal-500 flex items-center justify-center group-hover:scale-105 transition-transform">
-              <Hash className="w-6 h-6 text-white" />
-            </div>
-            <div className="flex-1">
-              <h3 className="text-lg font-semibold mb-1">Correspondences</h3>
-              <p className="text-gray-400 text-sm">Magical associations & meanings</p>
-            </div>
-            <div className="text-purple-400 group-hover:translate-x-1 transition-transform">
-              <ArrowRight className="w-5 h-5" />
-            </div>
-          </div>
-        </Link>
-
-        {/* Rituals Card */}
-        <Link href="/dashboard/rituals" className="card-mystical p-6 hover:bg-gray-800/70 transition-colors group">
-          <div className="flex items-center space-x-4">
-            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-500 to-indigo-500 flex items-center justify-center group-hover:scale-105 transition-transform">
-              <Sparkles className="w-6 h-6 text-white" />
-            </div>
-            <div className="flex-1">
-              <h3 className="text-lg font-semibold mb-1">Rituals</h3>
-              <p className="text-gray-400 text-sm">Create & track sacred practices</p>
-            </div>
-            <div className="text-purple-400 group-hover:translate-x-1 transition-transform">
-              <ArrowRight className="w-5 h-5" />
-            </div>
-          </div>
-        </Link>
-
-        {/* Grimoire Card */}
-        <Link href="/dashboard/grimoire" className="card-mystical p-6 hover:bg-gray-800/70 transition-colors group">
-          <div className="flex items-center space-x-4">
-            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center group-hover:scale-105 transition-transform">
-              <BookOpen className="w-6 h-6 text-white" />
-            </div>
-            <div className="flex-1">
-              <h3 className="text-lg font-semibold mb-1">Grimoire</h3>
-              <p className="text-gray-400 text-sm">Your personal book of shadows</p>
-            </div>
-            <div className="text-purple-400 group-hover:translate-x-1 transition-transform">
-              <ArrowRight className="w-5 h-5" />
-            </div>
-          </div>
-        </Link>
-
-        {/* Check-ins Card */}
-        <Link href="/dashboard/checkins" className="card-mystical p-6 hover:bg-gray-800/70 transition-colors group">
-          <div className="flex items-center space-x-4">
-            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-red-500 to-pink-500 flex items-center justify-center group-hover:scale-105 transition-transform">
-              <Heart className="w-6 h-6 text-white" />
-            </div>
-            <div className="flex-1">
-              <h3 className="text-lg font-semibold mb-1">Energy Check-ins</h3>
-              <p className="text-gray-400 text-sm">Track your spiritual wellbeing</p>
-            </div>
-            <div className="text-purple-400 group-hover:translate-x-1 transition-transform">
-              <ArrowRight className="w-5 h-5" />
-            </div>
-          </div>
-        </Link>
-
-        {/* Settings Card */}
-        <Link href="/dashboard/settings" className="card-mystical p-6 hover:bg-gray-800/70 transition-colors group">
-          <div className="flex items-center space-x-4">
-            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-gray-500 to-gray-600 flex items-center justify-center group-hover:scale-105 transition-transform">
-              <Settings className="w-6 h-6 text-white" />
-            </div>
-            <div className="flex-1">
-              <h3 className="text-lg font-semibold mb-1">Settings</h3>
-              <p className="text-gray-400 text-sm">Customize your experience</p>
-            </div>
-            <div className="text-purple-400 group-hover:translate-x-1 transition-transform">
-              <ArrowRight className="w-5 h-5" />
-            </div>
-          </div>
-        </Link>
-      </div>
-
-      {/* Recent Activity Section */}
-      <div>
-        <h2 className="text-xl font-semibold mb-4">Recent Activity</h2>
-        <div className="card-mystical p-6">
-          <p className="text-gray-400 text-center py-8">
-            Your recent spiritual activities will appear here
-          </p>
+          }>
+            <SidebarStats />
+          </Suspense>
         </div>
       </div>
     </div>

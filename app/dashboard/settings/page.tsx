@@ -1,3 +1,6 @@
+// Settings page with user-specific content requires dynamic rendering
+export const dynamic = 'force-dynamic'
+
 export default function SettingsPage() {
   return (
     <div className="space-y-6">
