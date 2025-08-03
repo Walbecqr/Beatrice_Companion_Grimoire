@@ -64,22 +64,19 @@ export default function ChatInterface({
   const sendMessage = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!input.trim() || isLoading || !sessionId || readOnly) return
-
     const userMessage: Message = {
       role: 'user',
       content: input.trim(),
+      created_at: new Date().toISOString()
     }
-
     // Update session title if this is the first user message in a new session
     if (isNewSession && messages.length === 1) {
       updateSessionTitle(userMessage.content)
     }
-
     // Add user message to UI immediately
     setMessages(prev => [...prev, userMessage])
     setInput('')
     setIsLoading(true)
-
     try {
       const response = await fetch('/api/chat', {
         method: 'POST',
@@ -91,25 +88,31 @@ export default function ChatInterface({
           sessionId,
         }),
       })
-
 if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || 'Failed to send message');
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || `Failed to send message: ${response.status}`)
       }
-      const data = await response.json();
-      if (!data.message) {
-        throw new Error('Invalid response from server');
+      const data = await response.json()
+      
+      if (!data.message || typeof data.message !== 'string') {
+        throw new Error('Invalid response format from server')
       }
-      // Add Beatrice's response
+      // Add Beatrice's response with timestamp
       setMessages(prev => [...prev, {
         role: 'assistant',
         content: data.message,
         created_at: new Date().toISOString(),
-      }]);
+      }])
     } catch (error: any) {
-      console.error('Error sending message:', error);
-      setIsLoading(false);
-      // Optionally, display an error message to the user
+      console.error('Error sending message:', error)
+      // Add error message to chat
+      setMessages(prev => [...prev, {
+        role: 'assistant',
+        content: 'I apologize, but I encountered an error. Please try again.',
+        created_at: new Date().toISOString(),
+      }])
+    } finally {
+      setIsLoading(false)
     }
   }
 
