@@ -1,8 +1,6 @@
-// app/dashboard/lunar-calendar/page.tsx
-// Enable ISR for lunar calendar - moon phase data is predictable and can be cached
-export const revalidate = 86400 // Revalidate daily
-
 'use client'
+
+// app/dashboard/lunar-calendar/page.tsx
 
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
