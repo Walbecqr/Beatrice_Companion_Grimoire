@@ -131,7 +131,9 @@ export function VirtualCorrespondenceList({
       <div
         ref={(ref) => {
           setContainerRef(ref)
-          scrollElementRef.current = ref
+          if (scrollElementRef.current !== ref) {
+            (scrollElementRef as React.MutableRefObject<HTMLDivElement | null>).current = ref
+          }
         }}
         className="h-full overflow-auto"
         onScroll={handleScroll}
