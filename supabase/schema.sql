@@ -1,161 +1,181 @@
--- Enable UUID extension
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+-- WARNING: This schema is for context only and is not meant to be run.
+-- Table order and constraints may not be valid for execution.
 
--- Users profile table (extends Supabase auth.users)
-CREATE TABLE public.profiles (
-    id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
-    username TEXT UNIQUE,
-    display_name TEXT,
-    spiritual_path TEXT,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-
--- Journal entries table
-CREATE TABLE public.journal_entries (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-    title TEXT,
-    content TEXT NOT NULL,
-    mood TEXT,
-    moon_phase TEXT,
-    beatrice_reflection TEXT,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-
--- Tags table
-CREATE TABLE public.tags (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    name TEXT NOT NULL UNIQUE,
-    category TEXT, -- 'emotion', 'moon_phase', 'deity', 'intent', 'tool'
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-
--- Journal entry tags (many-to-many)
-CREATE TABLE public.journal_entry_tags (
-    journal_entry_id UUID NOT NULL REFERENCES public.journal_entries(id) ON DELETE CASCADE,
-    tag_id UUID NOT NULL REFERENCES public.tags(id) ON DELETE CASCADE,
-    PRIMARY KEY (journal_entry_id, tag_id)
-);
-
--- Chat sessions with Beatrice
-CREATE TABLE public.chat_sessions (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-
--- Chat messages
 CREATE TABLE public.chat_messages (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    session_id UUID NOT NULL REFERENCES public.chat_sessions(id) ON DELETE CASCADE,
-    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-    role TEXT NOT NULL CHECK (role IN ('user', 'assistant')),
-    content TEXT NOT NULL,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  session_id uuid NOT NULL,
+  user_id uuid NOT NULL,
+  role text NOT NULL CHECK (role = ANY (ARRAY['user'::text, 'assistant'::text])),
+  content text NOT NULL,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT chat_messages_pkey PRIMARY KEY (id),
+  CONSTRAINT chat_messages_session_id_fkey FOREIGN KEY (session_id) REFERENCES public.chat_sessions(id),
+  CONSTRAINT chat_messages_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id)
 );
-
--- Daily check-ins
+CREATE TABLE public.chat_sessions (
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  user_id uuid NOT NULL,
+  created_at timestamp with time zone DEFAULT now(),
+  title character varying DEFAULT NULL::character varying,
+  updated_at timestamp with time zone NOT NULL DEFAULT timezone('utc'::text, now()),
+  CONSTRAINT chat_sessions_pkey PRIMARY KEY (id),
+  CONSTRAINT chat_sessions_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id)
+);
+CREATE TABLE public.correspondence_links (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  correspondence_id uuid NOT NULL,
+  linked_type character varying NOT NULL,
+  linked_id uuid NOT NULL,
+  user_id uuid NOT NULL,
+  created_at timestamp with time zone NOT NULL DEFAULT timezone('utc'::text, now()),
+  CONSTRAINT correspondence_links_pkey PRIMARY KEY (id),
+  CONSTRAINT correspondence_links_correspondence_id_fkey FOREIGN KEY (correspondence_id) REFERENCES public.correspondences(id),
+  CONSTRAINT correspondence_links_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id)
+);
+CREATE TABLE public.correspondences (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid,
+  name character varying NOT NULL,
+  category character varying NOT NULL,
+  magical_properties ARRAY DEFAULT '{}'::text[],
+  traditional_uses ARRAY DEFAULT '{}'::text[],
+  personal_notes text,
+  element character varying,
+  planet character varying,
+  zodiac_sign character varying,
+  chakra character varying,
+  is_personal boolean DEFAULT true,
+  is_favorited boolean DEFAULT false,
+  created_at timestamp with time zone NOT NULL DEFAULT timezone('utc'::text, now()),
+  updated_at timestamp with time zone NOT NULL DEFAULT timezone('utc'::text, now()),
+  description text,
+  botanical_name character varying,
+  common_names ARRAY DEFAULT '{}'::text[],
+  medical_uses ARRAY DEFAULT '{}'::text[],
+  personal_applications ARRAY DEFAULT '{}'::text[],
+  energy_type character varying CHECK (energy_type::text = ANY (ARRAY['masculine'::character varying, 'feminine'::character varying]::text[])),
+  deities ARRAY DEFAULT '{}'::text[],
+  cultural_traditions jsonb,
+  folklore text,
+  historical_uses ARRAY DEFAULT '{}'::text[],
+  source character varying,
+  verified boolean DEFAULT false,
+  CONSTRAINT correspondences_pkey PRIMARY KEY (id),
+  CONSTRAINT correspondences_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id)
+);
 CREATE TABLE public.daily_checkins (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-    prompt TEXT NOT NULL,
-    response TEXT,
-    completed BOOLEAN DEFAULT FALSE,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  user_id uuid NOT NULL,
+  prompt text NOT NULL,
+  response text,
+  completed boolean DEFAULT false,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT daily_checkins_pkey PRIMARY KEY (id),
+  CONSTRAINT daily_checkins_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id)
 );
-
--- Rituals (basic version for MVP)
+CREATE TABLE public.grimoire_entries (
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  user_id uuid NOT NULL,
+  title text NOT NULL,
+  type text NOT NULL CHECK (type = ANY (ARRAY['ritual'::text, 'spell'::text, 'chant'::text, 'blessing'::text, 'invocation'::text, 'meditation'::text, 'divination'::text, 'other'::text])),
+  purpose text,
+  ingredients ARRAY,
+  instructions text NOT NULL,
+  notes text,
+  source text,
+  moon_phase_compatibility ARRAY,
+  is_public boolean DEFAULT false,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  category text,
+  content text,
+  subcategory text,
+  description text,
+  intent text,
+  best_timing text,
+  difficulty_level integer,
+  moon_phase text,
+  season text,
+  element text,
+  planet text,
+  chakra text,
+  tags ARRAY,
+  is_favorite boolean DEFAULT false,
+  is_tested boolean DEFAULT false,
+  effectiveness_rating integer,
+  CONSTRAINT grimoire_entries_pkey PRIMARY KEY (id),
+  CONSTRAINT grimoire_entries_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id)
+);
+CREATE TABLE public.grimoire_entry_tags (
+  grimoire_entry_id uuid NOT NULL,
+  tag_id uuid NOT NULL,
+  CONSTRAINT grimoire_entry_tags_pkey PRIMARY KEY (grimoire_entry_id, tag_id),
+  CONSTRAINT grimoire_entry_tags_tag_id_fkey FOREIGN KEY (tag_id) REFERENCES public.grimoire_tags(id),
+  CONSTRAINT grimoire_entry_tags_grimoire_entry_id_fkey FOREIGN KEY (grimoire_entry_id) REFERENCES public.grimoire_entries(id)
+);
+CREATE TABLE public.grimoire_tags (
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  name text NOT NULL UNIQUE,
+  category text,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT grimoire_tags_pkey PRIMARY KEY (id)
+);
+CREATE TABLE public.journal_entries (
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  user_id uuid NOT NULL,
+  title text,
+  content text NOT NULL,
+  mood text,
+  moon_phase text,
+  beatrice_reflection text,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT journal_entries_pkey PRIMARY KEY (id),
+  CONSTRAINT journal_entries_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id)
+);
+CREATE TABLE public.journal_entry_tags (
+  journal_entry_id uuid NOT NULL,
+  tag_id uuid NOT NULL,
+  CONSTRAINT journal_entry_tags_pkey PRIMARY KEY (journal_entry_id, tag_id),
+  CONSTRAINT journal_entry_tags_journal_entry_id_fkey FOREIGN KEY (journal_entry_id) REFERENCES public.journal_entries(id),
+  CONSTRAINT journal_entry_tags_tag_id_fkey FOREIGN KEY (tag_id) REFERENCES public.tags(id)
+);
+CREATE TABLE public.profiles (
+  id uuid NOT NULL,
+  username text UNIQUE,
+  display_name text,
+  spiritual_path text,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT profiles_pkey PRIMARY KEY (id),
+  CONSTRAINT profiles_id_fkey FOREIGN KEY (id) REFERENCES auth.users(id)
+);
+CREATE TABLE public.ritual_grimoire_links (
+  ritual_id uuid NOT NULL,
+  grimoire_entry_id uuid NOT NULL,
+  CONSTRAINT ritual_grimoire_links_pkey PRIMARY KEY (ritual_id, grimoire_entry_id),
+  CONSTRAINT ritual_grimoire_links_grimoire_entry_id_fkey FOREIGN KEY (grimoire_entry_id) REFERENCES public.grimoire_entries(id),
+  CONSTRAINT ritual_grimoire_links_ritual_id_fkey FOREIGN KEY (ritual_id) REFERENCES public.rituals(id)
+);
 CREATE TABLE public.rituals (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-    title TEXT NOT NULL,
-    intent TEXT,
-    description TEXT,
-    moon_phase TEXT,
-    tools_used TEXT[],
-    outcome TEXT,
-    performed_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  user_id uuid NOT NULL,
+  title text NOT NULL,
+  intent text,
+  description text,
+  moon_phase text,
+  tools_used ARRAY,
+  outcome text,
+  performed_at timestamp with time zone DEFAULT now(),
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT timezone('utc'::text, now()),
+  CONSTRAINT rituals_pkey PRIMARY KEY (id),
+  CONSTRAINT rituals_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id)
 );
-
--- Create indexes for performance
-CREATE INDEX idx_journal_entries_user_id ON public.journal_entries(user_id);
-CREATE INDEX idx_chat_messages_session_id ON public.chat_messages(session_id);
-CREATE INDEX idx_daily_checkins_user_id ON public.daily_checkins(user_id);
-CREATE INDEX idx_rituals_user_id ON public.rituals(user_id);
-
--- Row Level Security (RLS) Policies
-ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.journal_entries ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.journal_entry_tags ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.chat_sessions ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.chat_messages ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.daily_checkins ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.rituals ENABLE ROW LEVEL SECURITY;
-
--- Profiles policies
-CREATE POLICY "Users can view own profile" ON public.profiles
-    FOR SELECT USING (auth.uid() = id);
-CREATE POLICY "Users can update own profile" ON public.profiles
-    FOR UPDATE USING (auth.uid() = id);
-
--- Journal entries policies
-CREATE POLICY "Users can view own journal entries" ON public.journal_entries
-    FOR SELECT USING (auth.uid() = user_id);
-CREATE POLICY "Users can create own journal entries" ON public.journal_entries
-    FOR INSERT WITH CHECK (auth.uid() = user_id);
-CREATE POLICY "Users can update own journal entries" ON public.journal_entries
-    FOR UPDATE USING (auth.uid() = user_id);
-CREATE POLICY "Users can delete own journal entries" ON public.journal_entries
-    FOR DELETE USING (auth.uid() = user_id);
-
--- Similar policies for other tables
-CREATE POLICY "Users can manage own chat sessions" ON public.chat_sessions
-    FOR ALL USING (auth.uid() = user_id);
-CREATE POLICY "Users can manage own chat messages" ON public.chat_messages
-    FOR ALL USING (auth.uid() = user_id);
-CREATE POLICY "Users can manage own daily checkins" ON public.daily_checkins
-    FOR ALL USING (auth.uid() = user_id);
-CREATE POLICY "Users can manage own rituals" ON public.rituals
-    FOR ALL USING (auth.uid() = user_id);
-
--- Tags are public read
-CREATE POLICY "Everyone can read tags" ON public.tags
-    FOR SELECT USING (true);
-
--- Journal entry tags follow journal entry permissions
-CREATE POLICY "Users can manage tags on own journal entries" ON public.journal_entry_tags
-    FOR ALL USING (
-        EXISTS (
-            SELECT 1 FROM public.journal_entries
-            WHERE id = journal_entry_id AND user_id = auth.uid()
-        )
-    );
-
--- Insert default tags
-INSERT INTO public.tags (name, category) VALUES
-    -- Moon phases
-    ('New Moon', 'moon_phase'),
-    ('Waxing Crescent', 'moon_phase'),
-    ('First Quarter', 'moon_phase'),
-    ('Waxing Gibbous', 'moon_phase'),
-    ('Full Moon', 'moon_phase'),
-    ('Waning Gibbous', 'moon_phase'),
-    ('Last Quarter', 'moon_phase'),
-    ('Waning Crescent', 'moon_phase'),
-    -- Emotions
-    ('Peaceful', 'emotion'),
-    ('Anxious', 'emotion'),
-    ('Grateful', 'emotion'),
-    ('Empowered', 'emotion'),
-    ('Confused', 'emotion'),
-    ('Inspired', 'emotion'),
-    -- Intents
-    ('Protection', 'intent'),
-    ('Love', 'intent'),
-    ('Healing', 'intent'),
-    ('Clarity', 'intent'),
-    ('Abundance', 'intent'),
-    ('Release', 'intent');
+CREATE TABLE public.tags (
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  name text NOT NULL UNIQUE,
+  category text,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT tags_pkey PRIMARY KEY (id)
+);
