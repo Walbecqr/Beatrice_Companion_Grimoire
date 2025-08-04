@@ -186,6 +186,24 @@ export async function GET(request: Request) {
     return NextResponse.json({ correspondences: data })
   } catch (error: any) {
     console.error('Correspondences GET error:', error)
+    
+    // Check for RSC errors
+    const errorMessage = error.message || ''
+    const errorStack = error.stack || ''
+    const isRscError = 
+      errorMessage.includes('_rsc') || 
+      errorStack.includes('_rsc') || 
+      errorMessage.includes('ERR_ABORTED') ||
+      errorStack.includes('ERR_ABORTED')
+    
+    if (isRscError) {
+      console.log('Detected RSC error in correspondences GET API:', errorMessage)
+      return NextResponse.json(
+        { error: 'A React Server Component error occurred. Please refresh the page and try again.' },
+        { status: 500 }
+      )
+    }
+    
     return NextResponse.json(
       { error: error.message || 'Internal server error' },
       { status: 500 }
@@ -269,6 +287,24 @@ export async function POST(request: Request) {
     return NextResponse.json({ correspondence: data })
   } catch (error: any) {
     console.error('Correspondences POST error:', error)
+    
+    // Check for RSC errors
+    const errorMessage = error.message || ''
+    const errorStack = error.stack || ''
+    const isRscError = 
+      errorMessage.includes('_rsc') || 
+      errorStack.includes('_rsc') || 
+      errorMessage.includes('ERR_ABORTED') ||
+      errorStack.includes('ERR_ABORTED')
+    
+    if (isRscError) {
+      console.log('Detected RSC error in correspondences POST API:', errorMessage)
+      return NextResponse.json(
+        { error: 'A React Server Component error occurred. Please refresh the page and try again.' },
+        { status: 500 }
+      )
+    }
+    
     return NextResponse.json(
       { error: error.message || 'Internal server error' },
       { status: 500 }

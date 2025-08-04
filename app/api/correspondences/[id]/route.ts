@@ -31,6 +31,24 @@ export async function GET(
     return NextResponse.json({ correspondence: data })
   } catch (error: any) {
     console.error('Correspondence GET error:', error)
+    
+    // Check for RSC errors
+    const errorMessage = error.message || ''
+    const errorStack = error.stack || ''
+    const isRscError = 
+      errorMessage.includes('_rsc') || 
+      errorStack.includes('_rsc') || 
+      errorMessage.includes('ERR_ABORTED') ||
+      errorStack.includes('ERR_ABORTED')
+    
+    if (isRscError) {
+      console.log('Detected RSC error in correspondence [id] GET API:', errorMessage)
+      return NextResponse.json(
+        { error: 'A React Server Component error occurred. Please refresh the page and try again.' },
+        { status: 500 }
+      )
+    }
+    
     return NextResponse.json(
       { error: error.message || 'Internal server error' },
       { status: 500 }
@@ -149,6 +167,24 @@ export async function PUT(
     return NextResponse.json({ correspondence: data })
   } catch (error: any) {
     console.error('Correspondence PUT error:', error)
+    
+    // Check for RSC errors
+    const errorMessage = error.message || ''
+    const errorStack = error.stack || ''
+    const isRscError = 
+      errorMessage.includes('_rsc') || 
+      errorStack.includes('_rsc') || 
+      errorMessage.includes('ERR_ABORTED') ||
+      errorStack.includes('ERR_ABORTED')
+    
+    if (isRscError) {
+      console.log('Detected RSC error in correspondence [id] PUT API:', errorMessage)
+      return NextResponse.json(
+        { error: 'A React Server Component error occurred. Please refresh the page and try again.' },
+        { status: 500 }
+      )
+    }
+    
     return NextResponse.json(
       { error: error.message || 'Internal server error' },
       { status: 500 }
@@ -208,6 +244,24 @@ export async function DELETE(
     })
   } catch (error: any) {
     console.error('Correspondence DELETE error:', error)
+    
+    // Check for RSC errors
+    const errorMessage = error.message || ''
+    const errorStack = error.stack || ''
+    const isRscError = 
+      errorMessage.includes('_rsc') || 
+      errorStack.includes('_rsc') || 
+      errorMessage.includes('ERR_ABORTED') ||
+      errorStack.includes('ERR_ABORTED')
+    
+    if (isRscError) {
+      console.log('Detected RSC error in correspondence [id] DELETE API:', errorMessage)
+      return NextResponse.json(
+        { error: 'A React Server Component error occurred. Please refresh the page and try again.' },
+        { status: 500 }
+      )
+    }
+    
     return NextResponse.json(
       { error: error.message || 'Internal server error' },
       { status: 500 }

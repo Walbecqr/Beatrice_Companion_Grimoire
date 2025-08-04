@@ -31,8 +31,26 @@ export async function GET(
 
     return NextResponse.json(data)
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Grimoire API error:', error)
+    
+    // Check for RSC errors
+    const errorMessage = error.message || ''
+    const errorStack = error.stack || ''
+    const isRscError = 
+      errorMessage.includes('_rsc') || 
+      errorStack.includes('_rsc') || 
+      errorMessage.includes('ERR_ABORTED') ||
+      errorStack.includes('ERR_ABORTED')
+    
+    if (isRscError) {
+      console.log('Detected RSC error in grimoire [id] GET API:', errorMessage)
+      return NextResponse.json(
+        { error: 'A React Server Component error occurred. Please refresh the page and try again.' },
+        { status: 500 }
+      )
+    }
+    
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
@@ -137,8 +155,26 @@ export async function PUT(
       message: 'Grimoire entry updated successfully!'
     })
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Grimoire API error:', error)
+    
+    // Check for RSC errors
+    const errorMessage = error.message || ''
+    const errorStack = error.stack || ''
+    const isRscError = 
+      errorMessage.includes('_rsc') || 
+      errorStack.includes('_rsc') || 
+      errorMessage.includes('ERR_ABORTED') ||
+      errorStack.includes('ERR_ABORTED')
+    
+    if (isRscError) {
+      console.log('Detected RSC error in grimoire [id] PUT API:', errorMessage)
+      return NextResponse.json(
+        { error: 'A React Server Component error occurred. Please refresh the page and try again.' },
+        { status: 500 }
+      )
+    }
+    
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
@@ -171,8 +207,26 @@ export async function DELETE(
       message: 'Grimoire entry deleted successfully!'
     })
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Grimoire API error:', error)
+    
+    // Check for RSC errors
+    const errorMessage = error.message || ''
+    const errorStack = error.stack || ''
+    const isRscError = 
+      errorMessage.includes('_rsc') || 
+      errorStack.includes('_rsc') || 
+      errorMessage.includes('ERR_ABORTED') ||
+      errorStack.includes('ERR_ABORTED')
+    
+    if (isRscError) {
+      console.log('Detected RSC error in grimoire [id] DELETE API:', errorMessage)
+      return NextResponse.json(
+        { error: 'A React Server Component error occurred. Please refresh the page and try again.' },
+        { status: 500 }
+      )
+    }
+    
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

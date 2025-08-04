@@ -1,11 +1,11 @@
 'use client'
 
 import { useEffect } from 'react'
-import { AlertTriangle, RefreshCw, Home, MessageCircle } from 'lucide-react'
+import { AlertTriangle, RefreshCw, Home } from 'lucide-react'
 import Link from 'next/link'
 import { useAuthErrorHandler } from '@/components/providers'
 
-export default function DashboardError({
+export default function GlobalError({
   error,
   reset,
 }: {
@@ -16,7 +16,7 @@ export default function DashboardError({
 
   useEffect(() => {
     // Log the error to an error reporting service
-    console.error('Dashboard error:', error)
+    console.error('Global application error:', error)
     
     // Check if this is an RSC error and refresh the session if needed
     const errorMessage = error.message || ''
@@ -29,12 +29,9 @@ export default function DashboardError({
       errorStack.includes('ERR_ABORTED')
     
     if (isRscError) {
-      console.log('Detected RSC error in error boundary, refreshing auth session')
+      console.log('Detected RSC error in global error boundary, refreshing auth session')
       refreshSession()
     }
-    
-    // You could send this to your error monitoring service
-    // trackError('dashboard_error', error, { digest: error.digest })
   }, [error, refreshSession])
 
   const isNetworkError = error.message.includes('fetch') || error.message.includes('network') || 
@@ -43,7 +40,7 @@ export default function DashboardError({
   const isDataError = error.message.includes('database') || error.message.includes('supabase')
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-6">
+    <div className="min-h-screen flex items-center justify-center p-6 bg-gradient-to-br from-purple-950 via-purple-900 to-indigo-950">
       <div className="card-mystical max-w-lg w-full p-8 text-center space-y-6">
         {/* Mystical Error Icon */}
         <div className="relative mx-auto w-20 h-20">
@@ -104,35 +101,12 @@ export default function DashboardError({
           </button>
           
           <Link 
-            href="/dashboard"
+            href="/"
             className="btn-mystical flex items-center justify-center space-x-2 flex-1 bg-gray-700 hover:bg-gray-600"
           >
             <Home className="w-4 h-4" />
             <span>Return Home</span>
           </Link>
-        </div>
-
-        {/* Support Options */}
-        <div className="border-t border-purple-500/20 pt-6 space-y-3">
-          <p className="text-sm text-gray-400">
-            If this cosmic disturbance persists, seek guidance:
-          </p>
-          <div className="flex justify-center space-x-4">
-            <Link 
-              href="/dashboard/chat"
-              className="text-purple-400 hover:text-purple-300 text-sm flex items-center space-x-1"
-            >
-              <MessageCircle className="w-4 h-4" />
-              <span>Ask Beatrice</span>
-            </Link>
-            <button 
-              onClick={() => window.location.reload()}
-              className="text-purple-400 hover:text-purple-300 text-sm flex items-center space-x-1"
-            >
-              <RefreshCw className="w-4 h-4" />
-              <span>Refresh Portal</span>
-            </button>
-          </div>
         </div>
 
         {/* Mystical Footer */}

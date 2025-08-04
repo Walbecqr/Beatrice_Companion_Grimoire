@@ -225,7 +225,21 @@ export function useSmartPrefetch() {
           // Small delay between prefetches to avoid overwhelming
           await new Promise(resolve => setTimeout(resolve, 100))
         } catch (error) {
-          console.warn(`Failed to prefetch ${route}:`, error)
+          // Check if this is an RSC error
+          const errorMessage = error instanceof Error ? error.message : String(error)
+          const errorStack = error instanceof Error ? error.stack || '' : ''
+          
+          const isRscError = 
+            errorMessage.includes('_rsc') || 
+            errorStack.includes('_rsc') || 
+            errorMessage.includes('ERR_ABORTED') ||
+            errorStack.includes('ERR_ABORTED')
+          
+          if (isRscError) {
+            console.warn(`RSC error while prefetching ${route}:`, error)
+          } else {
+            console.warn(`Failed to prefetch ${route}:`, error)
+          }
         }
       }
     }
@@ -238,7 +252,23 @@ export function useSmartPrefetch() {
     try {
       await prefetchCommonRoutes()
     } catch (error) {
-      console.warn('Failed to prefetch common data:', error)
+      // Check if this is an RSC error
+      const errorMessage = error instanceof Error ? error.message : String(error)
+      const errorStack = error instanceof Error ? error.stack || '' : ''
+      
+      const isRscError = 
+        errorMessage.includes('_rsc') || 
+        errorStack.includes('_rsc') || 
+        errorMessage.includes('ERR_ABORTED') ||
+        errorStack.includes('ERR_ABORTED') ||
+        errorMessage.includes('timeout') ||
+        errorMessage.includes('RSC error')
+      
+      if (isRscError) {
+        console.warn('RSC error while prefetching common data:', error)
+      } else {
+        console.warn('Failed to prefetch common data:', error)
+      }
     }
   }
 
@@ -268,11 +298,29 @@ export function useSmartPrefetch() {
   // Hover-based prefetching for links
   const handleLinkHover = (href: string) => {
     if (!prefetchedRoutes.current.has(href)) {
-      router.prefetch(href)
-      prefetchedRoutes.current.add(href)
-      
-      if (process.env.NODE_ENV === 'development') {
-        console.log(`Hover-prefetched ${href}`)
+      try {
+        router.prefetch(href)
+        prefetchedRoutes.current.add(href)
+        
+        if (process.env.NODE_ENV === 'development') {
+          console.log(`Hover-prefetched ${href}`)
+        }
+      } catch (error) {
+        // Check if this is an RSC error
+        const errorMessage = error instanceof Error ? error.message : String(error)
+        const errorStack = error instanceof Error ? error.stack || '' : ''
+        
+        const isRscError = 
+          errorMessage.includes('_rsc') || 
+          errorStack.includes('_rsc') || 
+          errorMessage.includes('ERR_ABORTED') ||
+          errorStack.includes('ERR_ABORTED')
+        
+        if (isRscError) {
+          console.warn(`RSC error while hover-prefetching ${href}:`, error)
+        } else {
+          console.warn(`Failed to hover-prefetch ${href}:`, error)
+        }
       }
     }
   }

@@ -477,6 +477,23 @@ export async function POST(request: Request) {
   } catch (error: any) {
     console.error('❌ Chat API error:', error)
     
+    // Check for RSC errors
+    const errorMessage = error.message || ''
+    const errorStack = error.stack || ''
+    const isRscError = 
+      errorMessage.includes('_rsc') || 
+      errorStack.includes('_rsc') || 
+      errorMessage.includes('ERR_ABORTED') ||
+      errorStack.includes('ERR_ABORTED')
+    
+    if (isRscError) {
+      console.log('Detected RSC error in chat API:', errorMessage)
+      return NextResponse.json(
+        { error: 'A React Server Component error occurred. Please refresh the page and try again.' },
+        { status: 500 }
+      )
+    }
+    
     // Handle specific Anthropic errors
     if (error.status === 401) {
       return NextResponse.json(

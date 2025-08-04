@@ -52,7 +52,12 @@ export function SmartLink({
       clearTimeout(timeoutRef.current)
       // Add a small delay to avoid prefetching on accidental hovers
       timeoutRef.current = setTimeout(() => {
-        handleLinkHover(linkProps.href as string)
+        try {
+          handleLinkHover(linkProps.href as string)
+        } catch (error) {
+          // Silently handle prefetch errors to avoid breaking the UI
+          console.warn(`Error prefetching on hover: ${linkProps.href}`, error)
+        }
       }, prefetchDelay)
     }
 
@@ -69,7 +74,12 @@ export function SmartLink({
   const handleTouchStart = (e: TouchEvent<HTMLAnchorElement>) => {
     // On touch devices, prefetch immediately on touch
     if (prefetchOnHover && typeof linkProps.href === 'string') {
-      handleLinkHover(linkProps.href as string)
+      try {
+        handleLinkHover(linkProps.href as string)
+      } catch (error) {
+        // Silently handle prefetch errors to avoid breaking the UI
+        console.warn(`Error prefetching on touch: ${linkProps.href}`, error)
+      }
     }
     
     onTouchStart?.(e)

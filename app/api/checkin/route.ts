@@ -120,6 +120,24 @@ export async function GET(request: Request) {
     return NextResponse.json({ checkin: newCheckin })
   } catch (error: any) {
     console.error('Check-in API error:', error)
+    
+    // Check for RSC errors
+    const errorMessage = error.message || ''
+    const errorStack = error.stack || ''
+    const isRscError = 
+      errorMessage.includes('_rsc') || 
+      errorStack.includes('_rsc') || 
+      errorMessage.includes('ERR_ABORTED') ||
+      errorStack.includes('ERR_ABORTED')
+    
+    if (isRscError) {
+      console.log('Detected RSC error in checkin GET API:', errorMessage)
+      return NextResponse.json(
+        { error: 'A React Server Component error occurred. Please refresh the page and try again.' },
+        { status: 500 }
+      )
+    }
+    
     return NextResponse.json(
       { error: error.message || 'Internal server error' },
       { status: 500 }
@@ -160,6 +178,24 @@ export async function POST(request: Request) {
     return NextResponse.json({ checkin: data })
   } catch (error: any) {
     console.error('Check-in update error:', error)
+    
+    // Check for RSC errors
+    const errorMessage = error.message || ''
+    const errorStack = error.stack || ''
+    const isRscError = 
+      errorMessage.includes('_rsc') || 
+      errorStack.includes('_rsc') || 
+      errorMessage.includes('ERR_ABORTED') ||
+      errorStack.includes('ERR_ABORTED')
+    
+    if (isRscError) {
+      console.log('Detected RSC error in checkin POST API:', errorMessage)
+      return NextResponse.json(
+        { error: 'A React Server Component error occurred. Please refresh the page and try again.' },
+        { status: 500 }
+      )
+    }
+    
     return NextResponse.json(
       { error: error.message || 'Internal server error' },
       { status: 500 }

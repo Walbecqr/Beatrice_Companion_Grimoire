@@ -1,11 +1,11 @@
 'use client'
 
 import { useEffect } from 'react'
-import { AlertTriangle, RefreshCw, Home, MessageCircle } from 'lucide-react'
+import { AlertTriangle, RefreshCw, Home, LogIn } from 'lucide-react'
 import Link from 'next/link'
 import { useAuthErrorHandler } from '@/components/providers'
 
-export default function DashboardError({
+export default function AuthError({
   error,
   reset,
 }: {
@@ -16,7 +16,7 @@ export default function DashboardError({
 
   useEffect(() => {
     // Log the error to an error reporting service
-    console.error('Dashboard error:', error)
+    console.error('Authentication error:', error)
     
     // Check if this is an RSC error and refresh the session if needed
     const errorMessage = error.message || ''
@@ -29,18 +29,17 @@ export default function DashboardError({
       errorStack.includes('ERR_ABORTED')
     
     if (isRscError) {
-      console.log('Detected RSC error in error boundary, refreshing auth session')
+      console.log('Detected RSC error in auth error boundary, refreshing auth session')
       refreshSession()
     }
-    
-    // You could send this to your error monitoring service
-    // trackError('dashboard_error', error, { digest: error.digest })
   }, [error, refreshSession])
 
   const isNetworkError = error.message.includes('fetch') || error.message.includes('network') || 
                          error.message.includes('ERR_ABORTED') || error.message.includes('_rsc')
-  const isAuthError = error.message.includes('auth') || error.message.includes('unauthorized')
-  const isDataError = error.message.includes('database') || error.message.includes('supabase')
+  const isAuthError = error.message.includes('auth') || error.message.includes('unauthorized') || 
+                      error.message.includes('token') || error.message.includes('session')
+  const isFormError = error.message.includes('form') || error.message.includes('input') || 
+                      error.message.includes('validation')
 
   return (
     <div className="min-h-screen flex items-center justify-center p-6">
@@ -57,13 +56,16 @@ export default function DashboardError({
         {/* Error Message */}
         <div className="space-y-3">
           <h2 className="text-2xl font-bold text-gradient">
-            The Cosmic Connection Faltered
+            {isAuthError && "Sacred Gateway Disrupted"}
+            {isNetworkError && "Spiritual Connection Interrupted"}
+            {isFormError && "Mystical Form Imbalance"}
+            {!isAuthError && !isNetworkError && !isFormError && "Authentication Portal Error"}
           </h2>
           <p className="text-gray-300">
-            {isNetworkError && "The spiritual network connection was interrupted. This may be due to a React Server Component error. Please refresh the page or try again."}
-            {isAuthError && "Your sacred session has expired. Please sign in again to access your spiritual space."}
-            {isDataError && "The cosmic database is experiencing turbulence. Our spiritual guides are working to restore harmony."}
-            {!isNetworkError && !isAuthError && !isDataError && "An unexpected spiritual disturbance has occurred. The universe is working to restore balance."}
+            {isAuthError && "The sacred authentication process encountered a disturbance. Your spiritual credentials could not be verified at this time."}
+            {isNetworkError && "The connection to the spiritual realm was interrupted. This may be due to a React Server Component error. Please try again."}
+            {isFormError && "The mystical form energies are out of balance. Please check your spiritual credentials and try again."}
+            {!isAuthError && !isNetworkError && !isFormError && "An unexpected disturbance occurred while accessing the sacred gateway. The universe is working to restore balance."}
           </p>
           
           {/* Technical Details (for debugging) */}
@@ -85,7 +87,6 @@ export default function DashboardError({
                     <li>Check server components that fetch data</li>
                     <li>Verify Supabase authentication is working</li>
                     <li>Ensure proper error handling in async components</li>
-                    <li>Try disabling prefetching temporarily</li>
                   </ul>
                 </div>
               )}
@@ -104,40 +105,25 @@ export default function DashboardError({
           </button>
           
           <Link 
-            href="/dashboard"
+            href="/auth/login"
+            className="btn-mystical flex items-center justify-center space-x-2 flex-1 bg-gray-700 hover:bg-gray-600"
+          >
+            <LogIn className="w-4 h-4" />
+            <span>Login Page</span>
+          </Link>
+          
+          <Link 
+            href="/"
             className="btn-mystical flex items-center justify-center space-x-2 flex-1 bg-gray-700 hover:bg-gray-600"
           >
             <Home className="w-4 h-4" />
-            <span>Return Home</span>
+            <span>Home</span>
           </Link>
-        </div>
-
-        {/* Support Options */}
-        <div className="border-t border-purple-500/20 pt-6 space-y-3">
-          <p className="text-sm text-gray-400">
-            If this cosmic disturbance persists, seek guidance:
-          </p>
-          <div className="flex justify-center space-x-4">
-            <Link 
-              href="/dashboard/chat"
-              className="text-purple-400 hover:text-purple-300 text-sm flex items-center space-x-1"
-            >
-              <MessageCircle className="w-4 h-4" />
-              <span>Ask Beatrice</span>
-            </Link>
-            <button 
-              onClick={() => window.location.reload()}
-              className="text-purple-400 hover:text-purple-300 text-sm flex items-center space-x-1"
-            >
-              <RefreshCw className="w-4 h-4" />
-              <span>Refresh Portal</span>
-            </button>
-          </div>
         </div>
 
         {/* Mystical Footer */}
         <div className="text-xs text-gray-500 italic">
-&ldquo;Even in darkness, the stars continue to shine. This too shall pass.&rdquo;
+&ldquo;The path to wisdom sometimes requires patience. Your journey awaits beyond this temporary obstacle.&rdquo;
         </div>
       </div>
     </div>
