@@ -1,21 +1,32 @@
 import { NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
+import OpenAI from 'openai';
 import { createServerClient } from '@/lib/supabase/server';
-import { Stream } from '@anthropic-ai/sdk/streaming';
 import { ContextManager } from '@/lib/utils/context-manager';
 import { ResponseCache } from '@/lib/utils/response-cache';
 import { edgeConfig } from '@/lib/utils/edge-config';
 const USE_MOCK_MODE = false;
-if (!USE_MOCK_MODE && !process.env.ANTHROPIC_API_KEY) {
-  console.error('❌ ANTHROPIC_API_KEY is not set in environment variables');
+const AI_PROVIDER = process.env.AI_PROVIDER || 'anthropic';
+if (!USE_MOCK_MODE) {
+  if (AI_PROVIDER === 'anthropic' && !process.env.ANTHROPIC_API_KEY) {
+    console.error('❌ ANTHROPIC_API_KEY is not set in environment variables');
+  }
+  if (AI_PROVIDER === 'openai' && !process.env.OPENAI_API_KEY) {
+    console.error('❌ OPENAI_API_KEY is not set in environment variables');
+  }
 }
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY || 'dummy-key-for-mock-mode',
-})
+const anthropic = AI_PROVIDER === 'anthropic'
+  ? new Anthropic({
+      apiKey: process.env.ANTHROPIC_API_KEY || 'dummy-key-for-mock-mode',
+    })
+  : null;
+const openai = AI_PROVIDER === 'openai'
+  ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+  : null;
 
 // Initialize context manager and response cache
-const contextManager = new ContextManager(anthropic)
-const responseCache = new ResponseCache()
+const contextManager = anthropic ? new ContextManager(anthropic) : null;
+const responseCache = new ResponseCache();
 
 // Beatrice's personality and context
 const BEATRICE_SYSTEM_PROMPT = `You are Beatrice, a wise and compassionate spiritual companion. You are:
@@ -131,6 +142,24 @@ export async function POST(request: Request) {
       }
     }
 
+    // Get conversation history for context
+    const { data: history } = await supabase
+      .from('chat_messages')
+      .select('role, content, created_at')
+      .eq('session_id', currentSessionId)
+      .order('created_at', { ascending: true })
+
+    const rawMessages = (history || []).map(msg => ({
+      role: msg.role as 'user' | 'assistant',
+      content: msg.content,
+      created_at: msg.created_at,
+    }))
+
+    // Use context manager for optimized context when available
+    const aiMessages = cacheSettings.enableContextCache && contextManager
+      ? await contextManager.getOptimizedContext(currentSessionId, rawMessages)
+      : rawMessages.slice(-20)
+
     if (USE_MOCK_MODE) {
       // Use mock response in development
       console.log('🔮 Using mock mode for Beatrice')
@@ -199,7 +228,7 @@ export async function POST(request: Request) {
           sessionId: currentSessionId,
         })
       }
-    } else {
+    } else if (AI_PROVIDER === 'anthropic') {
       console.log('🤖 Using real Anthropic API for Beatrice')
       
       // Validate API key exists
@@ -207,26 +236,7 @@ export async function POST(request: Request) {
         throw new Error('ANTHROPIC_API_KEY not properly configured')
       }
 
-      // Get conversation history for context with intelligent summarization
-      const { data: history } = await supabase
-        .from('chat_messages')
-        .select('role, content, created_at')
-        .eq('session_id', currentSessionId)
-        .order('created_at', { ascending: true })
-
-      // Convert messages to Claude format
-      const rawMessages = (history || []).map(msg => ({
-        role: msg.role as 'user' | 'assistant',
-        content: msg.content,
-        created_at: msg.created_at
-      }))
-
-      // Use context manager for optimized context
-      const claudeMessages = cacheSettings.enableContextCache
-        ? await contextManager.getOptimizedContext(currentSessionId, rawMessages)
-        : rawMessages.slice(-20) // Fallback to simple sliding window
-
-      console.log('📤 Sending request to Anthropic with', claudeMessages.length, 'messages')
+      console.log('📤 Sending request to Anthropic with', aiMessages.length, 'messages')
 
       if (stream) {
         // Use streaming API
@@ -235,7 +245,7 @@ export async function POST(request: Request) {
           max_tokens: 500,
           temperature: 0.7,
           system: BEATRICE_SYSTEM_PROMPT,
-          messages: claudeMessages,
+          messages: aiMessages,
         })
 
         console.log('📥 Starting streaming response from Anthropic')
@@ -295,7 +305,7 @@ export async function POST(request: Request) {
           max_tokens: 500,
           temperature: 0.7,
           system: BEATRICE_SYSTEM_PROMPT,
-          messages: claudeMessages,
+          messages: aiMessages,
         })
 
         console.log('📥 Received response from Anthropic')
@@ -329,6 +339,108 @@ export async function POST(request: Request) {
           sessionId: currentSessionId,
         })
       }
+    } else if (AI_PROVIDER === 'openai') {
+      console.log('🤖 Using OpenAI API for Beatrice')
+
+      if (!process.env.OPENAI_API_KEY) {
+        throw new Error('OPENAI_API_KEY not properly configured')
+      }
+
+      console.log('📤 Sending request to OpenAI with', aiMessages.length, 'messages')
+
+      const openaiMessages = [
+        { role: 'system' as const, content: BEATRICE_SYSTEM_PROMPT },
+        ...aiMessages.map(m => ({ role: m.role, content: m.content })),
+      ]
+
+      if (stream) {
+        const completion = await openai!.chat.completions.create({
+          model: 'gpt-4o-mini',
+          temperature: 0.7,
+          messages: openaiMessages,
+          stream: true,
+        })
+
+        console.log('📥 Starting streaming response from OpenAI')
+
+        const encoder = new TextEncoder()
+        let fullMessage = ''
+
+        const readableStream = new ReadableStream({
+          async start(controller) {
+            try {
+              for await (const chunk of completion) {
+                const text = chunk.choices[0]?.delta?.content || ''
+                if (text) {
+                  fullMessage += text
+                  controller.enqueue(encoder.encode(`data: ${JSON.stringify({ text })}\n\n`))
+                }
+              }
+
+              await supabase
+                .from('chat_messages')
+                .insert({
+                  session_id: currentSessionId,
+                  user_id: user.id,
+                  role: 'assistant',
+                  content: fullMessage,
+                })
+
+              if (cacheSettings.enableResponseCache) {
+                await responseCache.cacheResponse(userMessage.content, fullMessage)
+              }
+
+              controller.enqueue(encoder.encode(`data: ${JSON.stringify({ done: true, sessionId: currentSessionId })}\n\n`))
+              controller.close()
+
+              console.log('✅ Streaming chat response successful')
+            } catch (error) {
+              controller.error(error)
+            }
+          }
+        })
+
+        return new Response(readableStream, {
+          headers: {
+            'Content-Type': 'text/event-stream',
+            'Cache-Control': 'no-cache',
+            'Connection': 'keep-alive',
+          },
+        })
+      } else {
+        const completion = await openai!.chat.completions.create({
+          model: 'gpt-4o-mini',
+          temperature: 0.7,
+          messages: openaiMessages,
+        })
+
+        console.log('📥 Received response from OpenAI')
+
+        const assistantMessage = completion.choices[0]?.message?.content?.trim() ||
+          'I apologize, I had trouble understanding. Could you please rephrase?'
+
+        await supabase
+          .from('chat_messages')
+          .insert({
+            session_id: currentSessionId,
+            user_id: user.id,
+            role: 'assistant',
+            content: assistantMessage,
+          })
+
+        if (cacheSettings.enableResponseCache) {
+          await responseCache.cacheResponse(userMessage.content, assistantMessage)
+        }
+
+        console.log('✅ Chat response successful')
+
+        return NextResponse.json({
+          message: assistantMessage,
+          sessionId: currentSessionId,
+        })
+      }
+    } else {
+      throw new Error(`Unsupported AI provider: ${AI_PROVIDER}`)
     }
 
   } catch (error: any) {
