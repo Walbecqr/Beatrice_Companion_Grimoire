@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useParams, useRouter } from 'next/navigation'
 import { format } from 'date-fns'
-import { ArrowLeft, Play, Trash2, Calendar, MessageCircle } from 'lucide-react'
+import { ArrowLeft, Play, Trash2, Calendar, MessageCircle, Pencil } from 'lucide-react'
 import Link from 'next/link'
 import ChatInterface from '../components/chat-interface'
 import ChatNavigation from '../components/chat-navigation'
@@ -107,6 +107,26 @@ export default function ChatSessionPage() {
     router.push(`/dashboard/chat/continue/${sessionId}`)
   }
 
+  const renameSession = async () => {
+    const newTitle = prompt('Enter a new title for this conversation', session?.title || '')
+    if (newTitle === null) return
+    const trimmed = newTitle.trim()
+
+    try {
+      const { error } = await supabase
+        .from('chat_sessions')
+        .update({ title: trimmed || null })
+        .eq('id', sessionId)
+
+      if (error) throw error
+
+      setSession(prev => (prev ? { ...prev, title: trimmed || null } : prev))
+    } catch (error) {
+      console.error('Error renaming session:', error)
+      alert('Failed to rename conversation. Please try again.')
+    }
+  }
+
   if (loading) {
     return (
       <div className="space-y-6">
@@ -187,7 +207,15 @@ export default function ChatSessionPage() {
                 Continue
               </button>
             )}
-            
+
+            <button
+              onClick={renameSession}
+              className="px-4 py-2 text-sm bg-gray-700/20 border border-gray-600 text-gray-300 rounded-lg hover:bg-gray-700/30 transition-colors"
+            >
+              <Pencil className="w-4 h-4 mr-2" />
+              Rename
+            </button>
+
             <button
               onClick={deleteSession}
               className="px-4 py-2 text-sm bg-red-900/20 border border-red-800 text-red-400 rounded-lg hover:bg-red-900/30 transition-colors"
