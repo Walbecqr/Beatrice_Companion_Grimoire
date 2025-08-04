@@ -10,7 +10,8 @@ import {
   Calendar,
   Settings,
   LogOut,
-  Search
+  Search,
+  Book
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
@@ -20,6 +21,7 @@ const navItems = [
   { href: '/dashboard', icon: Home, label: 'Dashboard' },
   { href: '/dashboard/chat', icon: MessageCircle, label: 'Chat with Beatrice' },
   { href: '/dashboard/journal', icon: BookOpen, label: 'Journal' },
+  { href: '/dashboard/grimoire', icon: Book, label: 'Grimoire' },
   { href: '/dashboard/checkins', icon: Calendar, label: 'Daily Check-ins' },
   { href: '/dashboard/lunar-calendar', icon: Moon, label: 'Lunar Calendar' },
   { href: '/dashboard/rituals', icon: Sparkles, label: 'Rituals' },

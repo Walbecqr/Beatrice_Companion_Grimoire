@@ -71,7 +71,9 @@ export async function PUT(
       cultural_traditions,
       folklore,
       historical_uses,
-      is_favorited
+      is_favorited,
+      source,
+      verified
     } = body
 
     // First, verify the user owns this correspondence or it's a system one they can update notes on
@@ -123,6 +125,8 @@ export async function PUT(
       if (cultural_traditions !== undefined) updateData.cultural_traditions = cultural_traditions || null
       if (folklore !== undefined) updateData.folklore = folklore?.trim() || null
       if (historical_uses !== undefined) updateData.historical_uses = Array.isArray(historical_uses) ? historical_uses.filter(h => h.trim()) : []
+      if (source !== undefined) updateData.source = source?.trim() || null
+      if (verified !== undefined) updateData.verified = Boolean(verified)
     }
 
     // Allow personal notes updates for any correspondence the user has access to

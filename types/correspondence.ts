@@ -66,6 +66,8 @@ export interface CreateCorrespondenceRequest {
 
 export interface UpdateCorrespondenceRequest extends Partial<CreateCorrespondenceRequest> {
   is_favorited?: boolean
+  source?: string | null
+  verified?: boolean
 }
 
 export interface CorrespondenceFilters {
