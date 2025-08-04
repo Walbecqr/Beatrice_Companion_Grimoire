@@ -342,23 +342,27 @@ export async function POST(request: Request) {
     // Handle specific Anthropic errors
     if (error.status === 401) {
       return NextResponse.json(
-        { error: 'Invalid Anthropic API key. Please check your environment variables.' },
-        { status: 500 }
+        { error: 'Your session has expired. Please refresh and try again.' },
+        { status: 401 }
       )
     } else if (error.status === 429) {
       return NextResponse.json(
-        { error: 'Rate limit exceeded. Please try again later.' },
-        { status: 500 }
+        { error: 'The system is currently busy. Please wait a moment.' },
+        { status: 429 }
       )
     } else if (error.message?.includes('ANTHROPIC_API_KEY')) {
       return NextResponse.json(
-        { error: 'Anthropic API key is not configured. Please add ANTHROPIC_API_KEY to your .env.local file.' },
+        { error: 'The chat service is temporarily unavailable. Please try again later.' },
         { status: 500 }
       )
     }
     
+    // Generic error with more user-friendly message
     return NextResponse.json(
-      { error: error.message || 'Internal server error' },
+      { 
+        error: 'I apologize, but I encountered a technical issue. Please try again in a moment.',
+        details: error.message || 'Internal server error'
+      },
       { status: 500 }
     )
   }

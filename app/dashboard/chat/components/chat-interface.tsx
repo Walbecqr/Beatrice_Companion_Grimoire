@@ -181,10 +181,14 @@ export default function ChatInterface({
       }
     } catch (error: any) {
       console.error('Error sending message:', error)
-      // Add error message to chat
+      // Add error message to chat with specific feedback
       setMessages(prev => [...prev, {
         role: 'assistant',
-        content: 'I apologize, but I encountered an error. Please try again.',
+        content: error.message === 'Failed to send message: 401' 
+          ? 'Your session has expired. Please refresh the page and try again.'
+          : error.message === 'Failed to send message: 429'
+          ? 'The system is currently busy. Please wait a moment and try again.'
+          : 'I apologize, but I encountered a technical issue. Please try again in a moment.',
         created_at: new Date().toISOString(),
       }])
     } finally {
