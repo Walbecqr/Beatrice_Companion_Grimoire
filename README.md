@@ -9,7 +9,7 @@ A modern spiritual companion app featuring AI mentorship, journaling, and ritual
 - Node.js 18+
 - Docker & Docker Compose
 - Supabase account
-- Anthropic API key (for Claude AI)
+- Anthropic API key (for Claude AI) **or** OpenAI API key
 
 ### 1. Clone and Install Dependencies
 ```bash
@@ -18,9 +18,21 @@ npm install
 ```
 
 ### 2. Environment Setup
-Copy `.env.local.example` to `.env.local` and fill in your keys:
+Copy `env.example` to `.env.local` and fill in your keys:
 ```bash
-cp .env.local.example .env.local
+cp env.example .env.local
+```
+
+Select your AI provider in `.env.local`:
+
+```env
+AI_PROVIDER=anthropic   # or "openai"
+
+# If using Anthropic
+ANTHROPIC_API_KEY=your_anthropic_api_key_here
+
+# If using OpenAI
+OPENAI_API_KEY=your_openai_api_key_here
 ```
 
 ### 3. Supabase Setup
@@ -137,6 +149,10 @@ Automatic moon phase calculation in `lib/utils/moon-phase.ts`
 - Verify your ANTHROPIC_API_KEY in `.env.local`
 - Check if you have credits in your Anthropic account
 - Ensure API key starts with `sk-ant-`
+
+### OpenAI Connection Issues
+- Verify your OPENAI_API_KEY in `.env.local`
+- Confirm your OpenAI account has API access and credits
 
 ### Docker Issues
 - Run `docker-compose build` if dependencies change
