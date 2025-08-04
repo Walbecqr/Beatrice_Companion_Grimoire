@@ -1,8 +1,20 @@
 import { Redis } from '@upstash/redis'
 import { kv } from '@vercel/kv'
+import { createClient } from 'redis'
 
-// Initialize Redis client
-const redis = process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN
+// Initialize standard Redis client
+const standardRedis = process.env.REDIS_URL
+  ? createClient({ url: process.env.REDIS_URL })
+  : null
+
+// Connect standard Redis client
+if (standardRedis) {
+  standardRedis.on('error', (err) => console.error('Redis Client Error:', err))
+  standardRedis.connect().catch(console.error)
+}
+
+// Initialize Upstash Redis client (REST API)
+const upstashRedis = process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN
   ? new Redis({
       url: process.env.UPSTASH_REDIS_REST_URL,
       token: process.env.UPSTASH_REDIS_REST_TOKEN,
@@ -63,7 +75,7 @@ export class ResponseCache {
     
     // Try Vercel KV first (edge-optimized) - only if available
     try {
-      if (typeof kv !== 'undefined' && kv && process.env.KV_REST_API_URL) {
+      if (typeof kv !== 'undefined' && kv && process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN) {
         const cached = await kv.get<CachedResponse>(cacheKey)
         if (cached && this.isValidCache(cached, queryType)) {
           console.log(`📦 Cache hit (Vercel KV): ${queryType}`)
@@ -71,19 +83,35 @@ export class ResponseCache {
         }
       }
     } catch (error) {
-      console.error('Vercel KV error (cache disabled):', error)
+      console.error('Vercel KV error:', error)
+    }
+    
+    // Try standard Redis next
+    if (standardRedis && standardRedis.isReady) {
+      try {
+        const cachedStr = await standardRedis.get(cacheKey)
+        if (cachedStr) {
+          const cached = JSON.parse(cachedStr) as CachedResponse
+          if (this.isValidCache(cached, queryType)) {
+            console.log(`📦 Cache hit (Standard Redis): ${queryType}`)
+            return cached.content
+          }
+        }
+      } catch (error) {
+        console.error('Standard Redis cache error:', error)
+      }
     }
     
     // Fallback to Upstash Redis - only if configured
-    if (redis && process.env.UPSTASH_REDIS_REST_URL) {
+    if (upstashRedis && process.env.UPSTASH_REDIS_REST_URL) {
       try {
-        const cached = await redis.get<CachedResponse>(cacheKey)
+        const cached = await upstashRedis.get<CachedResponse>(cacheKey)
         if (cached && this.isValidCache(cached, queryType)) {
-          console.log(`📦 Cache hit (Redis): ${queryType}`)
+          console.log(`📦 Cache hit (Upstash Redis): ${queryType}`)
           return cached.content
         }
       } catch (error) {
-        console.error('Redis cache error (cache disabled):', error)
+        console.error('Upstash Redis cache error:', error)
       }
     }
     
@@ -117,7 +145,7 @@ export class ResponseCache {
     
     try {
       // Vercel KV (edge-optimized) - only if available
-      if (typeof kv !== 'undefined' && kv && process.env.KV_REST_API_URL) {
+      if (typeof kv !== 'undefined' && kv && process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN) {
         cacheAttempts++
         try {
           await kv.setex(cacheKey, ttl, cacheData)
@@ -127,14 +155,25 @@ export class ResponseCache {
         }
       }
       
-      // Upstash Redis - only if configured
-      if (redis && process.env.UPSTASH_REDIS_REST_URL) {
+      // Standard Redis - only if configured
+      if (standardRedis && standardRedis.isReady) {
         cacheAttempts++
         try {
-          await redis.setex(cacheKey, ttl, cacheData)
+          await standardRedis.setEx(cacheKey, ttl, JSON.stringify(cacheData))
           cacheSuccesses++
         } catch (redisError) {
-          console.error('Redis cache error:', redisError)
+          console.error('Standard Redis cache error:', redisError)
+        }
+      }
+      
+      // Upstash Redis - only if configured
+      if (upstashRedis && process.env.UPSTASH_REDIS_REST_URL) {
+        cacheAttempts++
+        try {
+          await upstashRedis.setex(cacheKey, ttl, cacheData)
+          cacheSuccesses++
+        } catch (redisError) {
+          console.error('Upstash Redis cache error:', redisError)
         }
       }
       

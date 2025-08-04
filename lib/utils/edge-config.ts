@@ -61,9 +61,9 @@ export class EdgeConfigManager {
     if (cached) return cached
 
     try {
-      // Check if Vercel Edge Config is available
-      if (typeof get === 'undefined') {
-        throw new Error('Edge Config not available')
+      // Check if Vercel Edge Config is available and configured
+      if (typeof get === 'undefined' || !process.env.EDGE_CONFIG) {
+        throw new Error('Edge Config not available or not configured')
       }
       
       const settings = await get<EdgeCacheSettings>(EDGE_CONFIG_KEYS.CACHE_SETTINGS)

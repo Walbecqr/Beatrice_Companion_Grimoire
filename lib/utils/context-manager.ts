@@ -1,8 +1,20 @@
 import { Redis } from '@upstash/redis'
+import { createClient } from 'redis'
 import Anthropic from '@anthropic-ai/sdk'
 
-// Initialize Redis client (Upstash)
-const redis = process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN
+// Initialize standard Redis client
+const standardRedis = process.env.REDIS_URL
+  ? createClient({ url: process.env.REDIS_URL })
+  : null
+
+// Connect standard Redis client
+if (standardRedis) {
+  standardRedis.on('error', (err) => console.error('Context Manager Redis Error:', err))
+  standardRedis.connect().catch(console.error)
+}
+
+// Initialize Upstash Redis client (REST API fallback)
+const upstashRedis = process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN
   ? new Redis({
       url: process.env.UPSTASH_REDIS_REST_URL,
       token: process.env.UPSTASH_REDIS_REST_TOKEN,
@@ -128,15 +140,31 @@ export class ContextManager {
    * Get cached context from Redis
    */
   private async getCachedContext(sessionId: string): Promise<ConversationContext | null> {
-    if (!redis) return null
+    const cacheKey = `context:${sessionId}`
     
-    try {
-      const cached = await redis.get(`context:${sessionId}`)
-      return cached as ConversationContext | null
-    } catch (error) {
-      console.error('Error getting cached context:', error)
-      return null
+    // Try standard Redis first
+    if (standardRedis && standardRedis.isReady) {
+      try {
+        const cachedStr = await standardRedis.get(cacheKey)
+        if (cachedStr) {
+          return JSON.parse(cachedStr) as ConversationContext
+        }
+      } catch (error) {
+        console.error('Error getting cached context from standard Redis:', error)
+      }
     }
+    
+    // Fallback to Upstash Redis
+    if (upstashRedis) {
+      try {
+        const cached = await upstashRedis.get(cacheKey)
+        return cached as ConversationContext | null
+      } catch (error) {
+        console.error('Error getting cached context from Upstash Redis:', error)
+      }
+    }
+    
+    return null
   }
 
   /**
@@ -146,16 +174,28 @@ export class ContextManager {
     sessionId: string, 
     context: ConversationContext
   ): Promise<void> {
-    if (!redis) return
+    const cacheKey = `context:${sessionId}`
+    const contextData = JSON.stringify(context)
     
-    try {
-      await redis.setex(
-        `context:${sessionId}`,
-        CONTEXT_CACHE_TTL,
-        JSON.stringify(context)
-      )
-    } catch (error) {
-      console.error('Error caching context:', error)
+    // Try standard Redis first
+    if (standardRedis && standardRedis.isReady) {
+      try {
+        await standardRedis.setEx(cacheKey, CONTEXT_CACHE_TTL, contextData)
+        console.log('✅ Context cached in standard Redis')
+        return
+      } catch (error) {
+        console.error('Error caching context in standard Redis:', error)
+      }
+    }
+    
+    // Fallback to Upstash Redis
+    if (upstashRedis) {
+      try {
+        await upstashRedis.setex(cacheKey, CONTEXT_CACHE_TTL, context)
+        console.log('✅ Context cached in Upstash Redis')
+      } catch (error) {
+        console.error('Error caching context in Upstash Redis:', error)
+      }
     }
   }
 
@@ -163,12 +203,27 @@ export class ContextManager {
    * Clear cached context for a session
    */
   async clearContext(sessionId: string): Promise<void> {
-    if (!redis) return
+    const cacheKey = `context:${sessionId}`
     
-    try {
-      await redis.del(`context:${sessionId}`)
-    } catch (error) {
-      console.error('Error clearing context:', error)
+    // Try standard Redis first
+    if (standardRedis && standardRedis.isReady) {
+      try {
+        await standardRedis.del(cacheKey)
+        console.log('✅ Context cleared from standard Redis')
+        return
+      } catch (error) {
+        console.error('Error clearing context from standard Redis:', error)
+      }
+    }
+    
+    // Fallback to Upstash Redis
+    if (upstashRedis) {
+      try {
+        await upstashRedis.del(cacheKey)
+        console.log('✅ Context cleared from Upstash Redis')
+      } catch (error) {
+        console.error('Error clearing context from Upstash Redis:', error)
+      }
     }
   }
 }
