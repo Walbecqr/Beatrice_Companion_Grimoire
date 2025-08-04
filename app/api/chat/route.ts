@@ -5,6 +5,7 @@ import { Stream } from '@anthropic-ai/sdk/streaming';
 import { ContextManager } from '@/lib/utils/context-manager';
 import { ResponseCache } from '@/lib/utils/response-cache';
 import { edgeConfig } from '@/lib/utils/edge-config';
+import { z } from 'zod';
 const USE_MOCK_MODE = false;
 if (!USE_MOCK_MODE && !process.env.ANTHROPIC_API_KEY) {
   console.error('❌ ANTHROPIC_API_KEY is not set in environment variables');
@@ -16,6 +17,18 @@ const anthropic = new Anthropic({
 // Initialize context manager and response cache
 const contextManager = new ContextManager(anthropic)
 const responseCache = new ResponseCache()
+
+const MessageSchema = z.object({
+  role: z.enum(['user', 'assistant']),
+  content: z.string(),
+  created_at: z.string().optional()
+})
+
+const ChatRequestSchema = z.object({
+  messages: z.array(MessageSchema),
+  sessionId: z.string().optional(),
+  stream: z.boolean().optional().default(true)
+})
 
 // Beatrice's personality and context
 const BEATRICE_SYSTEM_PROMPT = `You are Beatrice, a wise and compassionate spiritual companion. You are:
@@ -66,7 +79,12 @@ function getMockResponse(userMessage: string): string {
 
 export async function POST(request: Request) {
   try {
-    const { messages, sessionId, stream = true } = await request.json()
+    const body = await request.json()
+    const parsed = ChatRequestSchema.safeParse(body)
+    if (!parsed.success) {
+      return NextResponse.json({ error: 'Invalid request body' }, { status: 400 })
+    }
+    const { messages, sessionId, stream } = parsed.data
     
     // Get current user
     const supabase = createServerClient()
