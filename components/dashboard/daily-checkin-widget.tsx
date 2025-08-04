@@ -11,6 +11,7 @@ interface DailyCheckin {
   response: string | null | undefined
   completed: boolean
   created_at: string
+  session_id: string | null | undefined
 }
 
 export function DailyCheckinWidget() {
@@ -21,6 +22,9 @@ export function DailyCheckinWidget() {
 
   useEffect(() => {
     fetchTodaysCheckin()
+    const handleFocus = () => fetchTodaysCheckin()
+    window.addEventListener('focus', handleFocus)
+    return () => window.removeEventListener('focus', handleFocus)
   }, [])
 
   const fetchTodaysCheckin = async () => {

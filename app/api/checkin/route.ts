@@ -129,7 +129,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const { checkinId, response } = await request.json()
+    const { checkinId, response, sessionId } = await request.json()
     
     const supabase = createServerClient()
     const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -138,13 +138,18 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Update the check-in with response
+    // Update the check-in with response and session reference
+    const updateData: Record<string, any> = {
+      response: response,
+      completed: true,
+    }
+    if (sessionId) {
+      updateData.session_id = sessionId
+    }
+
     const { data, error } = await supabase
       .from('daily_checkins')
-      .update({
-        response: response,
-        completed: true,
-      })
+      .update(updateData)
       .eq('id', checkinId)
       .eq('user_id', user.id) // Ensure user owns this check-in
       .select()

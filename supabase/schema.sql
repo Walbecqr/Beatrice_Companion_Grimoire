@@ -69,9 +69,11 @@ CREATE TABLE public.daily_checkins (
   prompt text NOT NULL,
   response text,
   completed boolean DEFAULT false,
+  session_id uuid,
   created_at timestamp with time zone DEFAULT now(),
   CONSTRAINT daily_checkins_pkey PRIMARY KEY (id),
-  CONSTRAINT daily_checkins_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id)
+  CONSTRAINT daily_checkins_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id),
+  CONSTRAINT daily_checkins_session_id_fkey FOREIGN KEY (session_id) REFERENCES public.chat_sessions(id)
 );
 CREATE TABLE public.grimoire_entries (
   id uuid NOT NULL DEFAULT uuid_generate_v4(),

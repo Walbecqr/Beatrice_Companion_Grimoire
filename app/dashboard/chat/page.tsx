@@ -17,17 +17,46 @@ export default function NewChatPage() {
   const [messages, setMessages] = useState<Message[]>([])
   const [sessionId, setSessionId] = useState<string | null>(null)
   const [isCreatingSession, setIsCreatingSession] = useState(false)
+  const [checkinId, setCheckinId] = useState<string | null>(null)
+  const [checkinSaved, setCheckinSaved] = useState(false)
   const supabase = createClient()
   const searchParams = useSearchParams()
 
   useEffect(() => {
-    const checkinId = searchParams.get('checkin')
-    if (checkinId) {
-      handleCheckinContext(checkinId)
+    const checkinIdParam = searchParams.get('checkin')
+    if (checkinIdParam) {
+      setCheckinId(checkinIdParam)
+      handleCheckinContext(checkinIdParam)
     } else {
       createNewSession()
     }
   }, [])
+
+  useEffect(() => {
+    if (!checkinId || checkinSaved || !sessionId) return
+    const firstUserMessage = messages.find(m => m.role === 'user')
+    if (!firstUserMessage) return
+
+    const saveResponse = async () => {
+      setCheckinSaved(true)
+      try {
+        await fetch('/api/checkin', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            checkinId,
+            response: firstUserMessage.content,
+            sessionId
+          })
+        })
+      } catch (error) {
+        console.error('Error saving check-in response:', error)
+        setCheckinSaved(false)
+      }
+    }
+
+    saveResponse()
+  }, [messages, checkinId, checkinSaved, sessionId])
 
   const createNewSession = async () => {
     if (isCreatingSession) return
@@ -72,6 +101,8 @@ export default function NewChatPage() {
       if (error || !checkin) {
         return
       }
+
+      setCheckinId(checkinId)
 
       // Set check-in specific welcome message
       setMessages([{
