@@ -117,10 +117,44 @@ export default function AddGrimoireEntry() {
     e.preventDefault()
     if (!title.trim() || !instructions.trim()) return
     setSaving(true)
-    // Simulate save operation, replace with actual save logic
-    await new Promise((res) => setTimeout(res, 1000))
-    setSaving(false)
-    // Reset form or redirect
+    
+    try {
+      const response = await fetch('/api/grimoire', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          title,
+          type,
+          category,
+          subcategory,
+          purpose,
+          description,
+          intent,
+          instructions,
+          ingredients,
+          best_timing: bestTiming,
+          source,
+          tags: selectedTags,
+          notes,
+        }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to save grimoire entry')
+      }
+
+      // Redirect to grimoire list after successful save
+      window.location.href = '/dashboard/grimoire'
+    } catch (error) {
+      console.error('Error saving grimoire entry:', error)
+      alert(error instanceof Error ? error.message : 'Failed to save grimoire entry')
+    } finally {
+      setSaving(false)
+    }
   }
 
   useEffect(() => {
