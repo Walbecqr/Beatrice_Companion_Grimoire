@@ -3,7 +3,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Plus, History, MessageCircle, Sparkles } from 'lucide-react'
+import { Plus, History, Sparkles } from 'lucide-react'
 
 interface ChatNavigationProps {
   currentView: 'new' | 'history' | 'session'
@@ -41,20 +41,24 @@ export default function ChatNavigation({
       <div className="flex items-center space-x-3">
         {/* New Chat Button */}
         {showNewChatButton && currentView !== 'new' && (
-          <Link
-            href="/dashboard/chat"
-            className="btn-mystical px-4 py-2 text-sm"
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            New Chat
+          <Link href="/dashboard/chat" aria-label="Start a new chat">
+            <button
+              type="button"
+              className="btn-mystical px-4 py-2 text-sm inline-flex items-center"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              New Chat
+            </button>
           </Link>
         )}
 
         {/* Quick New Chat (for when already in new chat) */}
         {currentView === 'new' && showNewChatButton && onNewChat && (
           <button
+            type="button"
             onClick={onNewChat}
-            className="btn-mystical px-4 py-2 text-sm"
+            aria-label="Start a fresh chat"
+            className="btn-mystical px-4 py-2 text-sm inline-flex items-center"
           >
             <Plus className="w-4 h-4 mr-2" />
             Fresh Start
@@ -62,22 +66,27 @@ export default function ChatNavigation({
         )}
 
         {/* Chat History Button */}
-        <Link
-          href="/dashboard/chat/history"
-          className={`px-4 py-2 text-sm rounded-lg border transition-colors ${
-            currentView === 'history'
-              ? 'border-purple-500 bg-purple-900/20 text-purple-300'
-              : 'border-gray-700 text-gray-400 hover:text-gray-200 hover:border-gray-600'
-          }`}
-        >
-          <History className="w-4 h-4 mr-2 inline" />
-          History
+        <Link href="/dashboard/chat/history" aria-label="View chat history">
+          <a
+            className={`px-4 py-2 text-sm rounded-lg border transition-colors inline-flex items-center ${
+              currentView === 'history'
+                ? 'border-purple-500 bg-purple-900/20 text-purple-300'
+                : 'border-gray-700 text-gray-400 hover:text-gray-200 hover:border-gray-600'
+            }`}
+          >
+            <History className="w-4 h-4 mr-2" />
+            History
+          </a>
         </Link>
 
         {/* Active Chat Indicator */}
         {currentView === 'new' && (
-          <div className="flex items-center space-x-2 px-3 py-2 bg-green-900/20 border border-green-800 rounded-lg">
-            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+          <div
+            className="flex items-center space-x-2 px-3 py-2 bg-green-900/20 border border-green-800 rounded-lg"
+            role="status"
+            aria-live="polite"
+          >
+            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
             <span className="text-sm text-green-300">Active</span>
           </div>
         )}
