@@ -11,57 +11,57 @@ const navigationCards = [
     title: 'Chat with Beatrice',
     description: 'Start a new spiritual conversation',
     iconName: 'MessageCircle' as const,
-    gradient: 'from-purple-500 to-pink-500'
+    gradient: 'from-purple-500 to-pink-500',
   },
   {
     href: '/dashboard/journal',
     title: 'Sacred Journal',
     description: 'Record your spiritual journey',
     iconName: 'BookOpen' as const,
-    gradient: 'from-blue-500 to-purple-500'
+    gradient: 'from-blue-500 to-purple-500',
   },
   {
     href: '/dashboard/lunar-calendar',
     title: 'Lunar Calendar',
     description: 'Moon phases & celestial guidance',
     iconName: 'Moon' as const,
-    gradient: 'from-indigo-500 to-purple-500'
+    gradient: 'from-indigo-500 to-purple-500',
   },
   {
     href: '/dashboard/correspondences',
     title: 'Correspondences',
     description: 'Magical associations & meanings',
     iconName: 'Hash' as const,
-    gradient: 'from-green-500 to-teal-500'
+    gradient: 'from-green-500 to-teal-500',
   },
   {
     href: '/dashboard/rituals',
     title: 'Rituals',
     description: 'Create & track sacred practices',
     iconName: 'Sparkles' as const,
-    gradient: 'from-purple-500 to-indigo-500'
+    gradient: 'from-purple-500 to-indigo-500',
   },
   {
     href: '/dashboard/grimoire',
     title: 'Grimoire',
     description: 'Your personal book of shadows',
     iconName: 'BookOpen' as const,
-    gradient: 'from-amber-500 to-orange-500'
+    gradient: 'from-amber-500 to-orange-500',
   },
   {
     href: '/dashboard/checkins',
     title: 'Energy Check-ins',
     description: 'Track your spiritual wellbeing',
     iconName: 'Heart' as const,
-    gradient: 'from-red-500 to-pink-500'
+    gradient: 'from-red-500 to-pink-500',
   },
   {
     href: '/dashboard/settings',
     title: 'Settings',
     description: 'Customize your experience',
     iconName: 'Settings' as const,
-    gradient: 'from-gray-500 to-gray-600'
-  }
+    gradient: 'from-gray-500 to-gray-600',
+  },
 ]
 
 // Loading components for Suspense boundaries
@@ -123,6 +123,9 @@ async function SidebarStats() {
 }
 
 export default async function DashboardPage() {
+  // Fetch once and pass to components via props to avoid multiple fetches
+  const stats = await fetchDashboardData()
+
   return (
     <div className="space-y-8">
       {/* Welcome Section */}
@@ -134,6 +137,7 @@ export default async function DashboardPage() {
       {/* Dashboard Stats */}
       <Suspense fallback={<StatsLoading />}>
         <DashboardStats />
+        <DashboardStatsGrid stats={stats} />
       </Suspense>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -161,6 +165,7 @@ export default async function DashboardPage() {
             <h2 className="text-xl font-semibold mb-4">Recent Activity</h2>
             <Suspense fallback={<ActivityLoading />}>
               <RecentActivity />
+              <RecentActivityCard activities={stats.recentActivity} />
             </Suspense>
           </div>
         </div>
@@ -168,6 +173,8 @@ export default async function DashboardPage() {
         {/* Sidebar */}
         <div className="lg:col-span-1">
           <Suspense fallback={
+          <Suspense
+            fallback={
             <div className="space-y-6">
               <div className="card-mystical p-6 animate-pulse">
                 <div className="w-32 h-6 bg-purple-600/30 rounded mb-4" />
@@ -187,6 +194,8 @@ export default async function DashboardPage() {
               </div>
             </div>
           }>
+            }
+          >
             <SidebarStats />
           </Suspense>
         </div>

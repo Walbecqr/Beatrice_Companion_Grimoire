@@ -38,10 +38,7 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen flex items-center justify-center p-8">
       <div className="w-full max-w-md">
-        <Link 
-          href="/" 
-          className="inline-flex items-center text-purple-400 hover:text-purple-300 mb-8"
-        >
+        <Link href="/" className="inline-flex items-center text-purple-400 hover:text-purple-300 mb-8">
           <ArrowLeft className="w-4 h-4 mr-2" />
           Back to Home
         </Link>
@@ -94,6 +91,7 @@ export default function LoginPage() {
               type="submit"
               disabled={loading}
               className="btn-mystical w-full disabled:opacity-50 disabled:cursor-not-allowed"
+              aria-busy={loading}
             >
               {loading ? 'Connecting...' : 'Sign In'}
             </button>

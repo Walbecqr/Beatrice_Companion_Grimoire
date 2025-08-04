@@ -1,19 +1,14 @@
-import { NextResponse } from 'next/server'
-import Anthropic from '@anthropic-ai/sdk'
-import { createServerClient } from '@/lib/supabase/server'
-import { Stream } from '@anthropic-ai/sdk/streaming'
-import { ContextManager } from '@/lib/utils/context-manager'
-import { ResponseCache } from '@/lib/utils/response-cache'
-import { edgeConfig } from '@/lib/utils/edge-config'
-
-// Enable mock mode for development (set to false when you have Anthropic credits)
-const USE_MOCK_MODE = false
-
-// Improved error checking for API key
+import { NextResponse } from 'next/server';
+import Anthropic from '@anthropic-ai/sdk';
+import { createServerClient } from '@/lib/supabase/server';
+import { Stream } from '@anthropic-ai/sdk/streaming';
+import { ContextManager } from '@/lib/utils/context-manager';
+import { ResponseCache } from '@/lib/utils/response-cache';
+import { edgeConfig } from '@/lib/utils/edge-config';
+const USE_MOCK_MODE = false;
 if (!USE_MOCK_MODE && !process.env.ANTHROPIC_API_KEY) {
-  console.error('❌ ANTHROPIC_API_KEY is not set in environment variables')
+  console.error('❌ ANTHROPIC_API_KEY is not set in environment variables');
 }
-
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY || 'dummy-key-for-mock-mode',
 })
