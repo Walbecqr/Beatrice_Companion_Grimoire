@@ -154,6 +154,7 @@ export interface Database {
           prompt: string
           response: string | null
           completed: boolean
+          session_id: string | null
           created_at: string
         }
         Insert: {
@@ -162,6 +163,7 @@ export interface Database {
           prompt: string
           response?: string | null
           completed?: boolean
+          session_id?: string | null
           created_at?: string
         }
         Update: {
@@ -170,6 +172,7 @@ export interface Database {
           prompt?: string
           response?: string | null
           completed?: boolean
+          session_id?: string | null
           created_at?: string
         }
       }

@@ -11,6 +11,7 @@ interface DailyCheckin {
   response: string | null
   completed: boolean
   created_at: string
+  session_id: string | null
 }
 
 export default function CheckinsPage() {
