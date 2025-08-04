@@ -3,7 +3,7 @@
 
 import { createClient } from '@/lib/supabase/client'
 import { format, formatDistanceToNow } from 'date-fns'
-import { Calendar, Eye, MessageCircle, Moon, Search, Trash2 } from 'lucide-react'
+import { Calendar, Eye, MessageCircle, Moon, Search, Trash2, Pencil } from 'lucide-react'
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import ChatNavigation from '../components/chat-navigation'
@@ -115,6 +115,28 @@ export default function ChatHistoryPage() {
     } catch (error) {
       console.error('Error deleting session:', error)
       alert('Failed to delete conversation. Please try again.')
+    }
+  }
+
+  const renameSession = async (sessionId: string, currentTitle: string | null) => {
+    const newTitle = prompt('Enter a new title for this conversation', currentTitle || '')
+    if (newTitle === null) return
+    const trimmed = newTitle.trim()
+
+    try {
+      const { error } = await supabase
+        .from('chat_sessions')
+        .update({ title: trimmed || null })
+        .eq('id', sessionId)
+
+      if (error) throw error
+
+      setSessions(prev =>
+        prev.map(s => (s.id === sessionId ? { ...s, title: trimmed || null } : s))
+      )
+    } catch (error) {
+      console.error('Error renaming session:', error)
+      alert('Failed to rename conversation. Please try again.')
     }
   }
 
@@ -281,6 +303,14 @@ export default function ChatHistoryPage() {
                       >
                         <Eye className="w-4 h-4" />
                       </Link>
+
+                      <button
+                        onClick={() => renameSession(session.id, session.title)}
+                        className="p-2 text-gray-400 hover:text-gray-200 transition-colors"
+                        title="Rename conversation"
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </button>
 
                       <button
                         onClick={() => deleteSession(session.id)}
