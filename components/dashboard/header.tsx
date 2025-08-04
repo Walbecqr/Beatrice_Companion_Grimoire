@@ -15,13 +15,27 @@ export function Header() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
 
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', user.id)
         .single()
       
-      setProfile(data)
+      if (error) {
+        console.error('Error fetching profile:', error)
+        // Create a default profile if it doesn't exist
+        if (error.code === 'PGRST116') {
+          const { data: newProfile } = await supabase
+            .from('profiles')
+            .insert([{ id: user.id }])
+            .select()
+            .single()
+          
+          setProfile(newProfile)
+        }
+      } else {
+        setProfile(data)
+      }
     }
 
     fetchProfile()
