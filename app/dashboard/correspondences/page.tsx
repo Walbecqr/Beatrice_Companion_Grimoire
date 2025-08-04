@@ -2,47 +2,21 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { Plus, Search, BookOpen, Filter, Star, Eye, Grid, List, Sparkles } from 'lucide-react'
+import { Plus, Search, BookOpen, Filter, Grid, List, Star } from 'lucide-react'
 import Link from 'next/link'
-
-interface Correspondence {
-  id: string
-  name: string
-  category: string
-  magical_properties: string[]
-  traditional_uses: string[]
-  personal_notes: string | null
-  element: string | null
-  planet: string | null
-  zodiac_sign: string | null
-  chakra: string | null
-  is_personal: boolean
-  is_favorited: boolean
-  created_at: string
-  updated_at: string
-}
-
-const CATEGORIES = [
-  'herbs', 'crystals', 'colors', 'elements', 'tools', 'incense', 
-  'oils', 'candles', 'symbols', 'deities', 'animals', 'trees', 'other'
-]
-
-const MAGICAL_PROPERTIES = [
-  'protection', 'love', 'abundance', 'healing', 'banishing', 'cleansing',
-  'divination', 'wisdom', 'courage', 'peace', 'psychic_abilities', 
-  'spiritual_growth', 'grounding', 'transformation', 'communication'
-]
+import CorrespondencesTable from '@/components/correspondences-table'
+import { Correspondence } from '@/types/correspondence'
 
 export default function CorrespondencesPage() {
   const [correspondences, setCorrespondences] = useState<Correspondence[]>([])
   const [searchTerm, setSearchTerm] = useState('')
+  const [viewMode, setViewMode] = useState<'grid' | 'list' | 'table'>('table')
+  const [loading, setLoading] = useState(true)
+  const [showFilters, setShowFilters] = useState(false)
   const [selectedCategory, setSelectedCategory] = useState<string>('')
   const [selectedProperty, setSelectedProperty] = useState<string>('')
   const [showPersonalOnly, setShowPersonalOnly] = useState(false)
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false)
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
-  const [loading, setLoading] = useState(true)
-  const [showFilters, setShowFilters] = useState(false)
   const supabase = createClient()
 
   const fetchCorrespondences = useCallback(async () => {
@@ -89,7 +63,7 @@ export default function CorrespondencesPage() {
     const matchesSearch = !searchTerm || 
       item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       item.magical_properties.some(prop => prop.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      item.traditional_uses.some(use => use.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      item.traditional_uses?.some(use => use.toLowerCase().includes(searchTerm.toLowerCase())) ||
       item.personal_notes?.toLowerCase().includes(searchTerm.toLowerCase())
 
     // Category filter
@@ -170,49 +144,49 @@ export default function CorrespondencesPage() {
         </Link>
       </div>
 
-      {/* Search and Filters */}
-      <div className="space-y-4">
-        <div className="flex gap-3">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-            <input
-              type="text"
-              placeholder="Search correspondences, properties, or uses..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="input-mystical w-full pl-10"
-            />
-          </div>
-          <button
-            onClick={() => setShowFilters(!showFilters)}
-            className={`px-4 py-2 rounded-lg flex items-center gap-2 transition-colors ${
-              showFilters || selectedCategory || selectedProperty || showPersonalOnly || showFavoritesOnly
-                ? 'bg-purple-600 text-white'
-                : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
-            }`}
-          >
-            <Filter className="w-5 h-5" />
-            Filters
-          </button>
-          <div className="flex bg-gray-800 rounded-lg p-1">
-            <button
-              onClick={() => setViewMode('grid')}
-              className={`p-2 rounded ${viewMode === 'grid' ? 'bg-purple-600 text-white' : 'text-gray-400 hover:text-gray-200'}`}
-            >
-              <Grid className="w-4 h-4" />
-            </button>
-            <button
-              onClick={() => setViewMode('list')}
-              className={`p-2 rounded ${viewMode === 'list' ? 'bg-purple-600 text-white' : 'text-gray-400 hover:text-gray-200'}`}
-            >
-              <List className="w-4 h-4" />
-            </button>
-          </div>
+      {/* Search and View Mode */}
+      <div className="flex gap-3">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+          <input
+            type="text"
+            placeholder="Search correspondences, properties, or uses..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="input-mystical w-full pl-10"
+          />
         </div>
+        <div className="flex bg-gray-800 rounded-lg p-1">
+          <button
+            onClick={() => setViewMode('table')}
+            className={`p-2 rounded ${viewMode === 'table' ? 'bg-purple-600 text-white' : 'text-gray-400 hover:text-gray-200'}`}
+            title="Table view"
+          >
+            <List className="w-4 h-4" />
+          </button>
+          <button
+            onClick={() => setViewMode('grid')}
+            className={`p-2 rounded ${viewMode === 'grid' ? 'bg-purple-600 text-white' : 'text-gray-400 hover:text-gray-200'}`}
+            title="Grid view"
+          >
+            <Grid className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
 
-        {/* Advanced Filters */}
-        {showFilters && (
-          <div className="card-mystical">
+      {/* Table View */}
+      {viewMode === 'table' && (
+        <CorrespondencesTable
+          correspondences={filteredCorrespondences}
+          onToggleFavorite={toggleFavorite}
+        />
+      )}
+
+      {/* Grid View */}
+      {viewMode === 'grid' && (
+        <>
+          {/* Simple Filters for Grid View */}
+          <div className="card-mystical p-4">
             <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-400 mb-2">Category</label>
@@ -222,7 +196,7 @@ export default function CorrespondencesPage() {
                   className="input-mystical w-full"
                 >
                   <option value="">All Categories</option>
-                  {CATEGORIES.map(category => (
+                  {[...new Set(correspondences.map(c => c.category))].sort().map(category => (
                     <option key={category} value={category}>
                       {getCategoryIcon(category)} {category.charAt(0).toUpperCase() + category.slice(1)}
                     </option>
@@ -238,7 +212,7 @@ export default function CorrespondencesPage() {
                   className="input-mystical w-full"
                 >
                   <option value="">All Properties</option>
-                  {MAGICAL_PROPERTIES.map(property => (
+                  {[...new Set(correspondences.flatMap(c => c.magical_properties))].sort().map(property => (
                     <option key={property} value={property}>
                       {property.replace('_', ' ').charAt(0).toUpperCase() + property.replace('_', ' ').slice(1)}
                     </option>
@@ -283,129 +257,120 @@ export default function CorrespondencesPage() {
               </div>
             </div>
           </div>
-        )}
-      </div>
 
-      {/* Results Count */}
-      <div className="flex items-center justify-between text-sm text-gray-400">
-        <span>
-          {filteredCorrespondences.length} of {correspondences.length} correspondences
-        </span>
-        <div className="flex items-center gap-4">
-          <span>{correspondences.filter(c => c.is_personal).length} personal</span>
-          <span>{correspondences.filter(c => c.is_favorited).length} favorited</span>
-        </div>
-      </div>
+          {/* Results Count */}
+          <div className="flex items-center justify-between text-sm text-gray-400">
+            <span>
+              {filteredCorrespondences.length} of {correspondences.length} correspondences
+            </span>
+            <div className="flex items-center gap-4">
+              <span>{correspondences.filter(c => c.is_personal).length} personal</span>
+              <span>{correspondences.filter(c => c.is_favorited).length} favorited</span>
+            </div>
+          </div>
 
-      {/* Correspondences Display */}
-      {filteredCorrespondences.length === 0 ? (
-        <div className="card-mystical text-center py-12">
-          <BookOpen className="w-12 h-12 text-purple-400 mx-auto mb-4" />
-          <p className="text-gray-400 mb-4">
-            {searchTerm || selectedCategory || selectedProperty || showPersonalOnly || showFavoritesOnly
-              ? 'No correspondences found matching your filters.' 
-              : 'Your correspondence index awaits its first entry.'}
-          </p>
-          {!searchTerm && !selectedCategory && !selectedProperty && !showPersonalOnly && !showFavoritesOnly && (
-            <Link href="/dashboard/correspondences/new" className="text-purple-400 hover:text-purple-300">
-              Add your first correspondence →
-            </Link>
-          )}
-        </div>
-      ) : (
-        <div className={viewMode === 'grid' 
-          ? 'grid gap-4 md:grid-cols-2 lg:grid-cols-3' 
-          : 'space-y-3'
-        }>
-          {filteredCorrespondences.map((item) => (
-            <div
-              key={item.id}
-              className={`card-mystical hover:scale-[1.02] transition-transform ${
-                viewMode === 'list' ? 'flex items-start gap-4' : ''
-              }`}
-            >
-              <div className={viewMode === 'list' ? 'flex-1' : ''}>
-                <div className="flex items-start justify-between mb-3">
-                  <div className="flex items-center gap-2">
-                    <span className="text-2xl">{getCategoryIcon(item.category)}</span>
-                    <div>
-                      <Link
-                        href={`/dashboard/correspondences/${item.id}`}
-                        className="font-semibold text-lg hover:text-purple-300 transition-colors"
-                      >
-                        {item.name}
-                      </Link>
-                      <div className="flex items-center gap-2 mt-1">
-                        <span className="text-xs text-gray-500 capitalize">
-                          {item.category}
-                        </span>
-                        {item.is_personal && (
-                          <span className="text-xs bg-purple-900/30 text-purple-400 px-2 py-0.5 rounded-full">
-                            Personal
+          {/* Grid Display */}
+          {filteredCorrespondences.length === 0 ? (
+            <div className="card-mystical text-center py-12">
+              <BookOpen className="w-12 h-12 text-purple-400 mx-auto mb-4" />
+              <p className="text-gray-400 mb-4">
+                {searchTerm || selectedCategory || selectedProperty || showPersonalOnly || showFavoritesOnly
+                  ? 'No correspondences found matching your filters.' 
+                  : 'Your correspondence index awaits its first entry.'}
+              </p>
+              {!searchTerm && !selectedCategory && !selectedProperty && !showPersonalOnly && !showFavoritesOnly && (
+                <Link href="/dashboard/correspondences/new" className="text-purple-400 hover:text-purple-300">
+                  Add your first correspondence →
+                </Link>
+              )}
+            </div>
+          ) : (
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {filteredCorrespondences.map((item) => (
+                <div
+                  key={item.id}
+                  className="card-mystical hover:scale-[1.02] transition-transform"
+                >
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <span className="text-2xl">{getCategoryIcon(item.category)}</span>
+                      <div>
+                        <Link
+                          href={`/dashboard/correspondences/${item.id}`}
+                          className="font-semibold text-lg hover:text-purple-300 transition-colors"
+                        >
+                          {item.name}
+                        </Link>
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className="text-xs text-gray-500 capitalize">
+                            {item.category}
                           </span>
-                        )}
+                          {item.is_personal && (
+                            <span className="text-xs bg-purple-900/30 text-purple-400 px-2 py-0.5 rounded-full">
+                              Personal
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                  <button
-                    onClick={() => toggleFavorite(item.id, item.is_favorited)}
-                    className="text-gray-400 hover:text-yellow-400 transition-colors"
-                  >
-                    <Star className={`w-5 h-5 ${item.is_favorited ? 'fill-yellow-400 text-yellow-400' : ''}`} />
-                  </button>
-                </div>
-
-                {/* Magical Properties */}
-                <div className="flex flex-wrap gap-1 mb-3">
-                  {item.magical_properties.slice(0, viewMode === 'list' ? 6 : 4).map((property) => (
-                    <span
-                      key={property}
-                      className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs ${getPropertyColor(property)}`}
+                    <button
+                      onClick={() => toggleFavorite(item.id, item.is_favorited)}
+                      className="text-gray-400 hover:text-yellow-400 transition-colors"
                     >
-                      <Sparkles className="w-2.5 h-2.5 mr-1" />
-                      {property.replace('_', ' ')}
-                    </span>
-                  ))}
-                  {item.magical_properties.length > (viewMode === 'list' ? 6 : 4) && (
-                    <span className="text-xs text-gray-500">
-                      +{item.magical_properties.length - (viewMode === 'list' ? 6 : 4)} more
-                    </span>
+                      <Star className={`w-5 h-5 ${item.is_favorited ? 'fill-yellow-400 text-yellow-400' : ''}`} />
+                    </button>
+                  </div>
+
+                  {/* Magical Properties */}
+                  <div className="flex flex-wrap gap-1 mb-3">
+                    {item.magical_properties.slice(0, 4).map((property) => (
+                      <span
+                        key={property}
+                        className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs ${getPropertyColor(property)}`}
+                      >
+                        {property.replace('_', ' ')}
+                      </span>
+                    ))}
+                    {item.magical_properties.length > 4 && (
+                      <span className="text-xs text-gray-500">
+                        +{item.magical_properties.length - 4} more
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Traditional Uses Preview */}
+                  {item.traditional_uses && item.traditional_uses.length > 0 && (
+                    <div className="text-sm text-gray-400 mb-3">
+                      <strong>Uses:</strong> {item.traditional_uses.slice(0, 3).join(', ')}
+                      {item.traditional_uses.length > 3 && '...'}
+                    </div>
                   )}
+
+                  {/* Personal Notes Preview */}
+                  {item.personal_notes && (
+                    <div className="text-sm text-gray-300 mb-3 bg-purple-900/10 p-2 rounded italic">
+                      &ldquo;{item.personal_notes.slice(0, 100)}{item.personal_notes.length > 100 ? '...' : ''}&rdquo;
+                    </div>
+                  )}
+
+                  {/* Additional Properties */}
+                  <div className="flex items-center justify-between text-xs text-gray-500">
+                    <div className="flex items-center gap-3">
+                      {item.element && <span>Element: {item.element}</span>}
+                      {item.planet && <span>Planet: {item.planet}</span>}
+                    </div>
+                    <Link
+                      href={`/dashboard/correspondences/${item.id}`}
+                      className="text-purple-400 hover:text-purple-300"
+                    >
+                      View →
+                    </Link>
+                  </div>
                 </div>
-
-                {/* Traditional Uses Preview */}
-                {item.traditional_uses.length > 0 && (
-                  <div className="text-sm text-gray-400 mb-3">
-                    <strong>Uses:</strong> {item.traditional_uses.slice(0, 3).join(', ')}
-                    {item.traditional_uses.length > 3 && '...'}
-                  </div>
-                )}
-
-                {/* Personal Notes Preview */}
-                {item.personal_notes && (
-                  <div className="text-sm text-gray-300 mb-3 bg-purple-900/10 p-2 rounded italic">
-                    &ldquo;{item.personal_notes.slice(0, 100)}{item.personal_notes.length > 100 ? '...' : ''}&rdquo;
-                  </div>
-                )}
-
-                {/* Additional Properties */}
-                <div className="flex items-center justify-between text-xs text-gray-500">
-                  <div className="flex items-center gap-3">
-                    {item.element && <span>Element: {item.element}</span>}
-                    {item.planet && <span>Planet: {item.planet}</span>}
-                  </div>
-                  <Link
-                    href={`/dashboard/correspondences/${item.id}`}
-                    className="text-purple-400 hover:text-purple-300 flex items-center gap-1"
-                  >
-                    <Eye className="w-3 h-3" />
-                    View
-                  </Link>
-                </div>
-              </div>
+              ))}
             </div>
-          ))}
-        </div>
+          )}
+        </>
       )}
     </div>
   )
