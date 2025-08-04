@@ -32,7 +32,10 @@ export default function ChatInterface({
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const supabase = createClient()
 
+  // Keep a ref to the latest messages to avoid stale closures in async functions
+  const messagesRef = useRef<Message[]>(messages)
   useEffect(() => {
+    messagesRef.current = messages
     scrollToBottom()
   }, [messages])
 
@@ -69,10 +72,12 @@ export default function ChatInterface({
       content: input.trim(),
       created_at: new Date().toISOString()
     }
+
     // Update session title if this is the first user message in a new session
     if (isNewSession && messages.length === 1) {
       updateSessionTitle(userMessage.content)
     }
+
     // Add user message to UI immediately
     setMessages(prev => [...prev, userMessage])
     setInput('')
@@ -85,7 +90,7 @@ export default function ChatInterface({
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          messages: [...messages, userMessage],
+          messages: [...messagesRef.current, userMessage],
           sessionId,
           stream: true, // Enable streaming
         }),
@@ -110,45 +115,51 @@ export default function ChatInterface({
           created_at: new Date().toISOString(),
         }
         setMessages(prev => [...prev, assistantMessage])
-        const messageIndex = messages.length + 1 // Index of the assistant message we just added
+        
+        if (!reader) {
+          throw new Error('Failed to get stream reader')
+        }
         
         let accumulatedContent = ''
+        let doneReading = false
         
-        if (reader) {
-          while (true) {
-            const { done, value } = await reader.read()
-            if (done) break
-            
-            const chunk = decoder.decode(value)
-            const lines = chunk.split('\n')
-            
-            for (const line of lines) {
-              if (line.startsWith('data: ')) {
-                try {
-                  const data = JSON.parse(line.slice(6))
-                  
-                  if (data.text) {
-                    accumulatedContent += data.text
-                    // Update the assistant message with accumulated content
-                    setMessages(prev => {
-                      const newMessages = [...prev]
-                      if (newMessages[messageIndex]) {
-                        newMessages[messageIndex] = {
-                          ...newMessages[messageIndex],
-                          content: accumulatedContent
-                        }
+        while (!doneReading) {
+          const { done, value } = await reader.read()
+          doneReading = done
+          if (done) break
+          
+          const chunk = decoder.decode(value, { stream: true })
+          const lines = chunk.split('\n').filter(Boolean)
+          
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              try {
+                const data = JSON.parse(line.slice(6))
+                
+                if (data.text) {
+                  accumulatedContent += data.text
+                  // Update the assistant message with accumulated content
+                  setMessages(prev => {
+                    const newMessages = [...prev]
+                    // The assistant message should be last in the array
+                    const index = newMessages.length - 1
+                    if (newMessages[index] && newMessages[index].role === 'assistant') {
+                      newMessages[index] = {
+                        ...newMessages[index],
+                        content: accumulatedContent
                       }
-                      return newMessages
-                    })
-                  }
-                  
-                  if (data.done) {
-                    // Streaming complete
-                    console.log('✅ Streaming complete')
-                  }
-                } catch (e) {
-                  // Ignore parsing errors
+                    }
+                    return newMessages
+                  })
                 }
+                
+                if (data.done) {
+                  // Streaming complete
+                  doneReading = true
+                  break
+                }
+              } catch {
+                // Ignore parsing errors
               }
             }
           }
