@@ -184,6 +184,10 @@ export async function POST(request: Request) {
       // Always fallback to simple message slicing if context manager fails
       aiMessages = rawMessages.slice(-20)
     }
+    
+    // Remove created_at field from messages before sending to AI API
+    // as it's not accepted by Anthropic
+    aiMessages = aiMessages.map(({ role, content }) => ({ role, content }))
 
     if (USE_MOCK_MODE) {
       // Use mock response in development

@@ -56,7 +56,7 @@ export class ContextManager {
     recentMessages: Message[]
   ): Promise<Message[]> {
     // If Redis is not available, use simple sliding window
-    if (!redis) {
+    if (!standardRedis && !upstashRedis) {
       console.log('⚠️ Redis not configured - using simple context window')
       return recentMessages.slice(-CONTEXT_WINDOW_SIZE)
     }
