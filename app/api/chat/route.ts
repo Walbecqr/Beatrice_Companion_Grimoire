@@ -240,6 +240,9 @@ export async function POST(request: Request) {
 
       if (stream) {
         // Use streaming API
+        if (!anthropic) {
+          throw new Error('Anthropic client not initialized')
+        }
         const stream = await anthropic.messages.stream({
           model: 'claude-sonnet-4-20250514',
           max_tokens: 500,
@@ -300,6 +303,9 @@ export async function POST(request: Request) {
         })
       } else {
         // Non-streaming API (fallback)
+        if (!anthropic) {
+          throw new Error('Anthropic client not initialized')
+        }
         const completion = await anthropic.messages.create({
           model: 'claude-sonnet-4-20250514',
           max_tokens: 500,
