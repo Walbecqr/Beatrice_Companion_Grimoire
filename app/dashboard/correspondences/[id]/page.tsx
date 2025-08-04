@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { 
   ArrowLeft, 
@@ -71,6 +71,24 @@ const CATEGORIES = [
   { value: 'other', label: 'Other', icon: '📜' }
 ]
 
+const MAGICAL_PROPERTIES = [
+  'protection', 'love', 'abundance', 'healing', 'banishing', 'cleansing',
+  'divination', 'wisdom', 'courage', 'peace', 'psychic_abilities', 
+  'spiritual_growth', 'grounding', 'transformation', 'communication',
+  'prosperity', 'fertility', 'luck', 'success', 'creativity', 'intuition',
+  'balance', 'harmony', 'strength', 'clarity', 'manifestation', 'warding',
+  'purification', 'conflict_resolution'
+]
+
+const ELEMENTS = ['Fire', 'Water', 'Earth', 'Air', 'Spirit']
+const PLANETS = ['Sun', 'Moon', 'Mercury', 'Venus', 'Earth', 'Mars', 'Jupiter', 'Saturn', 'Uranus', 'Neptune']
+const ZODIAC_SIGNS = [
+  'Aries', 'Taurus', 'Gemini', 'Cancer', 'Leo', 'Virgo',
+  'Libra', 'Scorpio', 'Sagittarius', 'Capricorn', 'Aquarius', 'Pisces'
+]
+const CHAKRAS = ['Root', 'Sacral', 'Solar Plexus', 'Heart', 'Throat', 'Third Eye', 'Crown']
+const ENERGY_TYPES = [{ value: 'masculine', label: 'Masculine' }, { value: 'feminine', label: 'Feminine' }]
+
 export default function CorrespondenceDetailPage({ params }: { params: { id: string } }) {
   const [correspondence, setCorrespondence] = useState<Correspondence | null>(null)
   const [loading, setLoading] = useState(true)
@@ -80,13 +98,24 @@ export default function CorrespondenceDetailPage({ params }: { params: { id: str
   const [deleting, setDeleting] = useState(false)
   const [toastState, setToastState] = useState<{ type: 'success' | 'error', message: string } | null>(null)
   const [editedNotes, setEditedNotes] = useState<string>('')
+  const [editMode, setEditMode] = useState(false)
+  const [editedData, setEditedData] = useState<Partial<Correspondence>>({})
   
   const router = useRouter()
+  const searchParams = useSearchParams()
   const supabase = createClient()
 
   useEffect(() => {
     fetchCorrespondence()
   }, [params.id])
+
+  useEffect(() => {
+    // Check if edit mode is requested via URL parameter
+    if (searchParams.get('edit') === 'true' && correspondence?.is_personal) {
+      setEditMode(true)
+      setEditedData(correspondence)
+    }
+  }, [searchParams, correspondence])
 
   const fetchCorrespondence = async () => {
     try {
@@ -109,6 +138,7 @@ export default function CorrespondenceDetailPage({ params }: { params: { id: str
 
       setCorrespondence(data)
       setEditedNotes(data.personal_notes || '')
+      setEditedData(data)
     } catch (error: any) {
       console.error('Error fetching correspondence:', error)
       setError(error.message || 'Failed to load correspondence')
@@ -138,6 +168,57 @@ export default function CorrespondenceDetailPage({ params }: { params: { id: str
     } catch (error: any) {
       console.error('Error saving notes:', error)
       toast.error('Failed to save notes. Please try again.')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleSaveAll = async () => {
+    if (!correspondence || !editedData) return
+
+    setSaving(true)
+    try {
+      // Prepare update data
+      const updateData: any = {
+        name: editedData.name?.trim(),
+        category: editedData.category,
+        description: editedData.description?.trim() || null,
+        botanical_name: editedData.botanical_name?.trim() || null,
+        common_names: editedData.common_names || [],
+        magical_properties: editedData.magical_properties || [],
+        traditional_uses: editedData.traditional_uses || [],
+        medical_uses: editedData.medical_uses || [],
+        personal_applications: editedData.personal_applications || [],
+        personal_notes: editedData.personal_notes?.trim() || null,
+        element: editedData.element?.trim() || null,
+        planet: editedData.planet?.trim() || null,
+        zodiac_sign: editedData.zodiac_sign?.trim() || null,
+        chakra: editedData.chakra?.trim() || null,
+        energy_type: editedData.energy_type || null,
+        deities: editedData.deities || [],
+        cultural_traditions: editedData.cultural_traditions || null,
+        folklore: editedData.folklore?.trim() || null,
+        historical_uses: editedData.historical_uses || [],
+        source: editedData.source?.trim() || null,
+        verified: editedData.verified || false
+      }
+
+      const { error } = await supabase
+        .from('correspondences')
+        .update(updateData)
+        .eq('id', correspondence.id)
+
+      if (error) throw error
+
+      setCorrespondence({ ...correspondence, ...updateData })
+      setEditMode(false)
+      toast.success('Correspondence updated successfully!')
+      
+      // Remove edit parameter from URL
+      router.push(`/dashboard/correspondences/${correspondence.id}`)
+    } catch (error: any) {
+      console.error('Error saving correspondence:', error)
+      toast.error('Failed to save changes. Please try again.')
     } finally {
       setSaving(false)
     }
@@ -217,6 +298,34 @@ export default function CorrespondenceDetailPage({ params }: { params: { id: str
     return colorMap[property] || 'text-gray-400 bg-gray-900/20'
   }
 
+  // Helper functions for managing arrays in edit mode
+  const addToArray = (field: keyof Correspondence, value: string) => {
+    if (!value.trim()) return
+    const currentArray = (editedData[field] as string[]) || []
+    setEditedData({
+      ...editedData,
+      [field]: [...currentArray, value.trim()]
+    })
+  }
+
+  const removeFromArray = (field: keyof Correspondence, index: number) => {
+    const currentArray = (editedData[field] as string[]) || []
+    setEditedData({
+      ...editedData,
+      [field]: currentArray.filter((_, i) => i !== index)
+    })
+  }
+
+  const updateInArray = (field: keyof Correspondence, index: number, value: string) => {
+    const currentArray = (editedData[field] as string[]) || []
+    const newArray = [...currentArray]
+    newArray[index] = value
+    setEditedData({
+      ...editedData,
+      [field]: newArray
+    })
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -269,6 +378,42 @@ export default function CorrespondenceDetailPage({ params }: { params: { id: str
         </div>
 
         <div className="flex items-center space-x-2">
+          {correspondence.is_personal && !editMode && (
+            <button
+              onClick={() => {
+                setEditMode(true)
+                setEditedData(correspondence)
+              }}
+              className="btn-mystical"
+            >
+              <Edit2 className="w-4 h-4 mr-2" />
+              Edit
+            </button>
+          )}
+          
+          {editMode && (
+            <>
+              <button
+                onClick={handleSaveAll}
+                disabled={saving}
+                className="btn-mystical"
+              >
+                <Save className="w-4 h-4 mr-2" />
+                {saving ? 'Saving...' : 'Save'}
+              </button>
+              <button
+                onClick={() => {
+                  setEditMode(false)
+                  setEditedData(correspondence)
+                }}
+                className="px-4 py-2 text-gray-400 hover:text-gray-300 hover:bg-gray-800 rounded-lg transition-colors"
+              >
+                <X className="w-4 h-4 mr-2 inline" />
+                Cancel
+              </button>
+            </>
+          )}
+          
           <button
             onClick={handleToggleFavorite}
             className={`p-2 rounded-lg transition-colors ${
@@ -280,7 +425,7 @@ export default function CorrespondenceDetailPage({ params }: { params: { id: str
             <Star className={`w-5 h-5 ${correspondence.is_favorited ? 'fill-current' : ''}`} />
           </button>
 
-          {correspondence.is_personal && (
+          {correspondence.is_personal && !editMode && (
             <button
               onClick={handleDelete}
               disabled={deleting}
@@ -296,30 +441,84 @@ export default function CorrespondenceDetailPage({ params }: { params: { id: str
       <div className="card-mystical space-y-6">
         {/* Title and Category */}
         <div className="flex items-start justify-between">
-          <div className="flex items-center space-x-4">
-            <span className="text-4xl">{getCategoryIcon(correspondence.category)}</span>
-            <div>
+          <div className="flex items-center space-x-4 flex-1">
+            <span className="text-4xl">{getCategoryIcon(editMode ? editedData.category || correspondence.category : correspondence.category)}</span>
+            <div className="flex-1">
               <div className="flex items-center space-x-3 mb-2">
-                <span className="px-3 py-1 rounded-full text-sm bg-purple-900/20 text-purple-300 capitalize">
-                  {correspondence.category}
-                </span>
+                {editMode ? (
+                  <select
+                    value={editedData.category || ''}
+                    onChange={(e) => setEditedData({ ...editedData, category: e.target.value })}
+                    className="input-mystical"
+                  >
+                    <option value="">Select category</option>
+                    {CATEGORIES.map(cat => (
+                      <option key={cat.value} value={cat.value}>
+                        {cat.icon} {cat.label}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <span className="px-3 py-1 rounded-full text-sm bg-purple-900/20 text-purple-300 capitalize">
+                    {correspondence.category}
+                  </span>
+                )}
                 {correspondence.is_personal && (
                   <span className="px-3 py-1 rounded-full text-sm bg-green-900/20 text-green-300">
                     Personal
                   </span>
                 )}
-                {correspondence.verified && (
-                  <span className="px-3 py-1 rounded-full text-sm bg-blue-900/20 text-blue-300">
-                    Verified
-                  </span>
+                {editMode ? (
+                  <label className="flex items-center">
+                    <input
+                      type="checkbox"
+                      checked={editedData.verified || false}
+                      onChange={(e) => setEditedData({ ...editedData, verified: e.target.checked })}
+                      className="mr-2 rounded border-purple-500 text-purple-600 focus:ring-purple-500"
+                    />
+                    <span className="text-sm text-gray-300">Verified</span>
+                  </label>
+                ) : (
+                  correspondence.verified && (
+                    <span className="px-3 py-1 rounded-full text-sm bg-blue-900/20 text-blue-300">
+                      Verified
+                    </span>
+                  )
                 )}
               </div>
-              <h1 className="text-3xl font-bold text-white mb-2">{correspondence.name}</h1>
-              {correspondence.botanical_name && (
-                <p className="text-gray-400 italic">{correspondence.botanical_name}</p>
-              )}
-              {correspondence.description && (
-                <p className="text-gray-300 mt-2">{correspondence.description}</p>
+              {editMode ? (
+                <>
+                  <input
+                    type="text"
+                    value={editedData.name || ''}
+                    onChange={(e) => setEditedData({ ...editedData, name: e.target.value })}
+                    placeholder="Name"
+                    className="input-mystical w-full mb-2 text-2xl font-bold"
+                  />
+                  <input
+                    type="text"
+                    value={editedData.botanical_name || ''}
+                    onChange={(e) => setEditedData({ ...editedData, botanical_name: e.target.value })}
+                    placeholder="Botanical name (optional)"
+                    className="input-mystical w-full mb-2 italic"
+                  />
+                  <textarea
+                    value={editedData.description || ''}
+                    onChange={(e) => setEditedData({ ...editedData, description: e.target.value })}
+                    placeholder="Description (optional)"
+                    className="input-mystical w-full min-h-[80px] resize-none"
+                  />
+                </>
+              ) : (
+                <>
+                  <h1 className="text-3xl font-bold text-white mb-2">{correspondence.name}</h1>
+                  {correspondence.botanical_name && (
+                    <p className="text-gray-400 italic">{correspondence.botanical_name}</p>
+                  )}
+                  {correspondence.description && (
+                    <p className="text-gray-300 mt-2">{correspondence.description}</p>
+                  )}
+                </>
               )}
             </div>
           </div>
@@ -346,67 +545,188 @@ export default function CorrespondenceDetailPage({ params }: { params: { id: str
         )}
 
         {/* Magical Properties */}
-        {correspondence.magical_properties && correspondence.magical_properties.length > 0 && (
+        {(editMode || (correspondence.magical_properties && correspondence.magical_properties.length > 0)) && (
           <div>
             <h2 className="text-lg font-semibold text-white mb-3 flex items-center">
               <Sparkles className="w-5 h-5 mr-2" />
               Magical Properties
             </h2>
-            <div className="flex flex-wrap gap-2">
-              {correspondence.magical_properties.map((property, index) => (
-                <span
-                  key={index}
-                  className={`px-3 py-1 rounded-full text-sm ${getPropertyColor(property.toLowerCase())}`}
+            {editMode ? (
+              <div className="space-y-3">
+                <div className="flex flex-wrap gap-2">
+                  {(editedData.magical_properties || []).map((property, index) => (
+                    <span
+                      key={index}
+                      className={`inline-flex items-center px-3 py-1 rounded-full text-sm ${getPropertyColor(property.toLowerCase())}`}
+                    >
+                      {property.charAt(0).toUpperCase() + property.slice(1).replace('_', ' ')}
+                      <button
+                        onClick={() => removeFromArray('magical_properties', index)}
+                        className="ml-2 hover:text-red-400"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+                <select
+                  onChange={(e) => {
+                    if (e.target.value) {
+                      addToArray('magical_properties', e.target.value)
+                      e.target.value = ''
+                    }
+                  }}
+                  className="input-mystical w-full"
                 >
-                  {property.charAt(0).toUpperCase() + property.slice(1).replace('_', ' ')}
-                </span>
-              ))}
-            </div>
+                  <option value="">Add magical property...</option>
+                  {MAGICAL_PROPERTIES.filter(prop => !(editedData.magical_properties || []).includes(prop)).map(prop => (
+                    <option key={prop} value={prop}>
+                      {prop.charAt(0).toUpperCase() + prop.slice(1).replace('_', ' ')}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            ) : (
+              <div className="flex flex-wrap gap-2">
+                {correspondence.magical_properties?.map((property, index) => (
+                  <span
+                    key={index}
+                    className={`px-3 py-1 rounded-full text-sm ${getPropertyColor(property.toLowerCase())}`}
+                  >
+                    {property.charAt(0).toUpperCase() + property.slice(1).replace('_', ' ')}
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
         {/* Correspondences Grid */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {correspondence.element && (
-            <div className="flex items-center space-x-2">
-              <Zap className="w-4 h-4 text-purple-400" />
-              <div>
-                <div className="text-xs text-gray-400">Element</div>
-                <div className="text-sm text-gray-300">{correspondence.element}</div>
-              </div>
+        {editMode ? (
+          <div className="grid md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-400 mb-2">Element</label>
+              <select
+                value={editedData.element || ''}
+                onChange={(e) => setEditedData({ ...editedData, element: e.target.value || null })}
+                className="input-mystical w-full"
+              >
+                <option value="">Select element</option>
+                {ELEMENTS.map(el => (
+                  <option key={el} value={el}>{el}</option>
+                ))}
+              </select>
             </div>
-          )}
+            <div>
+              <label className="block text-sm font-medium text-gray-400 mb-2">Planet</label>
+              <select
+                value={editedData.planet || ''}
+                onChange={(e) => setEditedData({ ...editedData, planet: e.target.value || null })}
+                className="input-mystical w-full"
+              >
+                <option value="">Select planet</option>
+                {PLANETS.map(planet => (
+                  <option key={planet} value={planet}>{planet}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-400 mb-2">Zodiac Sign</label>
+              <select
+                value={editedData.zodiac_sign || ''}
+                onChange={(e) => setEditedData({ ...editedData, zodiac_sign: e.target.value || null })}
+                className="input-mystical w-full"
+              >
+                <option value="">Select zodiac sign</option>
+                {ZODIAC_SIGNS.map(sign => (
+                  <option key={sign} value={sign}>{sign}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-400 mb-2">Chakra</label>
+              <select
+                value={editedData.chakra || ''}
+                onChange={(e) => setEditedData({ ...editedData, chakra: e.target.value || null })}
+                className="input-mystical w-full"
+              >
+                <option value="">Select chakra</option>
+                {CHAKRAS.map(chakra => (
+                  <option key={chakra} value={chakra}>{chakra}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-400 mb-2">Energy Type</label>
+              <select
+                value={editedData.energy_type || ''}
+                onChange={(e) => setEditedData({ ...editedData, energy_type: e.target.value || null })}
+                className="input-mystical w-full"
+              >
+                <option value="">Select energy type</option>
+                {ENERGY_TYPES.map(type => (
+                  <option key={type.value} value={type.value}>{type.label}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-400 mb-2">Source</label>
+              <input
+                type="text"
+                value={editedData.source || ''}
+                onChange={(e) => setEditedData({ ...editedData, source: e.target.value })}
+                placeholder="Source (optional)"
+                className="input-mystical w-full"
+              />
+            </div>
+          </div>
+        ) : (
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {(correspondence.element || correspondence.planet || correspondence.zodiac_sign || correspondence.chakra) && (
+              <>
+                {correspondence.element && (
+                  <div className="flex items-center space-x-2">
+                    <Zap className="w-4 h-4 text-purple-400" />
+                    <div>
+                      <div className="text-xs text-gray-400">Element</div>
+                      <div className="text-sm text-gray-300">{correspondence.element}</div>
+                    </div>
+                  </div>
+                )}
 
-          {correspondence.planet && (
-            <div className="flex items-center space-x-2">
-              <Globe className="w-4 h-4 text-amber-400" />
-              <div>
-                <div className="text-xs text-gray-400">Planet</div>
-                <div className="text-sm text-gray-300">{correspondence.planet}</div>
-              </div>
-            </div>
-          )}
+                {correspondence.planet && (
+                  <div className="flex items-center space-x-2">
+                    <Globe className="w-4 h-4 text-amber-400" />
+                    <div>
+                      <div className="text-xs text-gray-400">Planet</div>
+                      <div className="text-sm text-gray-300">{correspondence.planet}</div>
+                    </div>
+                  </div>
+                )}
 
-          {correspondence.zodiac_sign && (
-            <div className="flex items-center space-x-2">
-              <Calendar className="w-4 h-4 text-indigo-400" />
-              <div>
-                <div className="text-xs text-gray-400">Zodiac</div>
-                <div className="text-sm text-gray-300">{correspondence.zodiac_sign}</div>
-              </div>
-            </div>
-          )}
+                {correspondence.zodiac_sign && (
+                  <div className="flex items-center space-x-2">
+                    <Calendar className="w-4 h-4 text-indigo-400" />
+                    <div>
+                      <div className="text-xs text-gray-400">Zodiac</div>
+                      <div className="text-sm text-gray-300">{correspondence.zodiac_sign}</div>
+                    </div>
+                  </div>
+                )}
 
-          {correspondence.chakra && (
-            <div className="flex items-center space-x-2">
-              <Heart className="w-4 h-4 text-pink-400" />
-              <div>
-                <div className="text-xs text-gray-400">Chakra</div>
-                <div className="text-sm text-gray-300">{correspondence.chakra}</div>
-              </div>
-            </div>
-          )}
-        </div>
+                {correspondence.chakra && (
+                  <div className="flex items-center space-x-2">
+                    <Heart className="w-4 h-4 text-pink-400" />
+                    <div>
+                      <div className="text-xs text-gray-400">Chakra</div>
+                      <div className="text-sm text-gray-300">{correspondence.chakra}</div>
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        )}
 
         {/* Traditional Uses */}
         {correspondence.traditional_uses && correspondence.traditional_uses.length > 0 && (
