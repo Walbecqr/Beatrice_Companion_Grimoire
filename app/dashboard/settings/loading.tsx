@@ -6,8 +6,8 @@ export default function SettingsLoading() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="space-y-2">
-          <div className="w-32 h-8 bg-purple-600/30 rounded animate-pulse" />
-          <div className="w-56 h-4 bg-purple-600/20 rounded animate-pulse" />
+          <div className="w-48 h-8 bg-purple-600/30 rounded animate-pulse" />
+          <div className="w-64 h-4 bg-purple-600/20 rounded animate-pulse" />
         </div>
       </div>
 

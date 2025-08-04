@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect } from 'react'
-import { Settings, RefreshCw, ArrowLeft, AlertTriangle } from 'lucide-react'
+import { Settings, RefreshCw, ArrowLeft, AlertTriangle, Wifi, Database, Save } from 'lucide-react'
 import Link from 'next/link'
 
 export default function SettingsError({
@@ -15,9 +15,22 @@ export default function SettingsError({
     console.error('Settings error:', error)
   }, [error])
 
+  // Detect specific error types
   const isPermissionError = error.message.includes('permission') || error.message.includes('unauthorized')
   const isDataError = error.message.includes('database') || error.message.includes('supabase')
   const isSaveError = error.message.includes('save') || error.message.includes('update')
+  const isNetworkError = error.message.includes('network') || 
+                         error.message.includes('fetch') || 
+                         error.message.includes('ERR_ABORTED') || 
+                         error.message.includes('ERR_CONNECTION')
+
+  // Get appropriate error icon
+  const ErrorIcon = () => {
+    if (isNetworkError) return <Wifi className="w-8 h-8 text-red-400" />
+    if (isDataError) return <Database className="w-8 h-8 text-red-400" />
+    if (isSaveError) return <Save className="w-8 h-8 text-red-400" />
+    return <AlertTriangle className="w-8 h-8 text-red-400" />
+  }
 
   return (
     <div className="space-y-6">
@@ -46,7 +59,7 @@ export default function SettingsError({
           <div className="absolute inset-2 border border-red-400/40 rounded-full animate-pulse" />
           
           <div className="absolute inset-0 flex items-center justify-center">
-            <AlertTriangle className="w-8 h-8 text-red-400" />
+            <ErrorIcon />
           </div>
         </div>
 
@@ -56,14 +69,16 @@ export default function SettingsError({
             {isPermissionError && "Sacred Configuration Locked"}
             {isDataError && "Preference Archive Disconnected"}
             {isSaveError && "Settings Save Ritual Failed"}
-            {!isPermissionError && !isDataError && !isSaveError && "Configuration Mysteries Disrupted"}
+            {isNetworkError && "Cosmic Connection Severed"}
+            {!isPermissionError && !isDataError && !isSaveError && !isNetworkError && "Configuration Mysteries Disrupted"}
           </h2>
           
           <p className="text-gray-300 text-sm max-w-md mx-auto">
             {isPermissionError && "The protective enchantments around your personal settings prevent access. You may need to renew your sacred session or elevate your spiritual permissions."}
             {isDataError && "The connection to your preference repository has been severed. The cosmic configuration keepers are working to restore access to your settings."}
             {isSaveError && "The ritual to preserve your settings has been disrupted. Your preferences remain safe, but the saving ceremony needs to be performed again."}
-            {!isPermissionError && !isDataError && !isSaveError && "An unknown force has disrupted access to your spiritual configuration. The cosmic preferences are temporarily veiled."}
+            {isNetworkError && "The ethereal connection to your settings has been disrupted. The cosmic network is experiencing interference."}
+            {!isPermissionError && !isDataError && !isSaveError && !isNetworkError && "An unknown force has disrupted access to your spiritual configuration. The cosmic preferences are temporarily veiled."}
           </p>
 
           {/* Specific Error Guidance */}
@@ -76,6 +91,9 @@ export default function SettingsError({
             )}
             {isSaveError && (
               <p>💾 Settings save failed - your changes may need to be re-entered</p>
+            )}
+            {isNetworkError && (
+              <p>📡 Network connection issue - check your internet connection</p>
             )}
           </div>
         </div>
@@ -91,11 +109,11 @@ export default function SettingsError({
           </button>
           
           <Link 
-            href="/dashboard/settings"
+            href="/dashboard"
             className="btn-mystical bg-gray-700 hover:bg-gray-600 flex items-center justify-center space-x-2 flex-1"
           >
-            <Settings className="w-4 h-4" />
-            <span>Fresh Configuration</span>
+            <ArrowLeft className="w-4 h-4" />
+            <span>Return to Dashboard</span>
           </Link>
         </div>
 
@@ -108,6 +126,7 @@ export default function SettingsError({
             <p>• Your preferences are safely stored</p>
             <p>• Refresh your spiritual session if needed</p>
             <p>• Default settings remain in effect</p>
+            {isNetworkError && <p>• Check your internet connection and try again</p>}
           </div>
         </div>
 
