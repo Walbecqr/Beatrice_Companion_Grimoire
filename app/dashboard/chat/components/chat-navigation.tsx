@@ -66,17 +66,17 @@ export default function ChatNavigation({
         )}
 
         {/* Chat History Button */}
-        <Link href="/dashboard/chat/history" aria-label="View chat history">
-          <a
-            className={`px-4 py-2 text-sm rounded-lg border transition-colors inline-flex items-center ${
-              currentView === 'history'
-                ? 'border-purple-500 bg-purple-900/20 text-purple-300'
-                : 'border-gray-700 text-gray-400 hover:text-gray-200 hover:border-gray-600'
-            }`}
-          >
-            <History className="w-4 h-4 mr-2" />
-            History
-          </a>
+        <Link 
+          href="/dashboard/chat/history" 
+          aria-label="View chat history"
+          className={`px-4 py-2 text-sm rounded-lg border transition-colors inline-flex items-center ${
+            currentView === 'history'
+              ? 'border-purple-500 bg-purple-900/20 text-purple-300'
+              : 'border-gray-700 text-gray-400 hover:text-gray-200 hover:border-gray-600'
+          }`}
+        >
+          <History className="w-4 h-4 mr-2" />
+          History
         </Link>
 
         {/* Active Chat Indicator */}
