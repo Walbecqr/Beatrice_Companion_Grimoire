@@ -181,6 +181,14 @@ export default function ChatInterface({
       }
     } catch (error: any) {
       console.error('Error sending message:', error)
+      
+      // Check for RSC errors
+      const errorMessage = error.message || ''
+      const isRscError = 
+        errorMessage.includes('_rsc') || 
+        errorMessage.includes('ERR_ABORTED') ||
+        errorMessage.includes('Failed to fetch')
+      
       // Add error message to chat with specific feedback
       setMessages(prev => [...prev, {
         role: 'assistant',
@@ -188,6 +196,8 @@ export default function ChatInterface({
           ? 'Your session has expired. Please refresh the page and try again.'
           : error.message === 'Failed to send message: 429'
           ? 'The system is currently busy. Please wait a moment and try again.'
+          : isRscError
+          ? 'I encountered a React Server Component error. Please refresh the page and try again.'
           : 'I apologize, but I encountered a technical issue. Please try again in a moment.',
         created_at: new Date().toISOString(),
       }])

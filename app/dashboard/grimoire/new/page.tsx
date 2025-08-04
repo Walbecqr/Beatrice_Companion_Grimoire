@@ -149,9 +149,24 @@ export default function AddGrimoireEntry() {
 
       // Redirect to grimoire list after successful save
       window.location.href = '/dashboard/grimoire'
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving grimoire entry:', error)
-      alert(error instanceof Error ? error.message : 'Failed to save grimoire entry')
+      
+      // Check for RSC errors
+      const errorMessage = error.message || ''
+      const errorStack = error.stack || ''
+      const isRscError = 
+        errorMessage.includes('_rsc') || 
+        errorStack.includes('_rsc') || 
+        errorMessage.includes('ERR_ABORTED') ||
+        errorStack.includes('ERR_ABORTED') ||
+        errorMessage.includes('Failed to fetch')
+      
+      if (isRscError) {
+        alert('A React Server Component error occurred. Please refresh the page and try again.')
+      } else {
+        alert(error instanceof Error ? error.message : 'Failed to save grimoire entry')
+      }
     } finally {
       setSaving(false)
     }
