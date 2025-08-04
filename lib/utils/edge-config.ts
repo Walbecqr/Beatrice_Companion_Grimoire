@@ -61,6 +61,11 @@ export class EdgeConfigManager {
     if (cached) return cached
 
     try {
+      // Check if Vercel Edge Config is available
+      if (typeof get === 'undefined') {
+        throw new Error('Edge Config not available')
+      }
+      
       const settings = await get<EdgeCacheSettings>(EDGE_CONFIG_KEYS.CACHE_SETTINGS)
       if (settings) {
         this.setLocalCache(EDGE_CONFIG_KEYS.CACHE_SETTINGS, settings)
@@ -70,11 +75,11 @@ export class EdgeConfigManager {
       console.error('Error fetching cache settings:', error)
     }
 
-    // Default settings
+    // Default settings - disable cache features when Edge Config is unavailable
     return {
-      enableResponseCache: true,
-      enableContextCache: true,
-      cacheWarmupEnabled: true,
+      enableResponseCache: false,
+      enableContextCache: false,
+      cacheWarmupEnabled: false,
       maxCacheAge: 86400, // 24 hours
     }
   }

@@ -123,9 +123,9 @@ export async function POST(request: Request) {
     } catch (error) {
       console.error('Edge Config error, using defaults:', error)
       cacheSettings = {
-        enableResponseCache: true,
-        enableContextCache: true,
-        cacheWarmupEnabled: true,
+        enableResponseCache: false, // Disable caching when Edge Config fails
+        enableContextCache: false,  // Disable context cache when Redis unavailable
+        cacheWarmupEnabled: false,
         maxCacheAge: 86400,
       }
     }
@@ -181,6 +181,7 @@ export async function POST(request: Request) {
         : rawMessages.slice(-20)
     } catch (error) {
       console.error('Context manager error, using fallback:', error)
+      // Always fallback to simple message slicing if context manager fails
       aiMessages = rawMessages.slice(-20)
     }
 

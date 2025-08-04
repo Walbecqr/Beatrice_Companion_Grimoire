@@ -43,45 +43,56 @@ export class ContextManager {
     sessionId: string,
     recentMessages: Message[]
   ): Promise<Message[]> {
-    // Try to get cached context from Redis
-    const cachedContext = await this.getCachedContext(sessionId)
-    
-    if (cachedContext && cachedContext.summary) {
-      // If we have a summary, prepend it as a system message
-      const summaryMessage: Message = {
-        role: 'assistant',
-        content: `[Previous conversation summary]: ${cachedContext.summary}`
-      }
-      
-      // Return summary + recent messages (sliding window)
-      const windowedMessages = recentMessages.slice(-CONTEXT_WINDOW_SIZE)
-      return [summaryMessage, ...windowedMessages]
+    // If Redis is not available, use simple sliding window
+    if (!redis) {
+      console.log('⚠️ Redis not configured - using simple context window')
+      return recentMessages.slice(-CONTEXT_WINDOW_SIZE)
     }
     
-    // Check if we need to create a summary
-    if (recentMessages.length > SUMMARY_THRESHOLD) {
-      const summary = await this.summarizeConversation(
-        recentMessages.slice(0, -CONTEXT_WINDOW_SIZE)
-      )
+    try {
+      // Try to get cached context from Redis
+      const cachedContext = await this.getCachedContext(sessionId)
       
-      // Cache the summary
-      await this.cacheContext(sessionId, {
-        messages: recentMessages.slice(-CONTEXT_WINDOW_SIZE),
-        summary,
-        messageCount: recentMessages.length
-      })
-      
-      // Return summary + recent messages
-      const summaryMessage: Message = {
-        role: 'assistant',
-        content: `[Previous conversation summary]: ${summary}`
+      if (cachedContext && cachedContext.summary) {
+        // If we have a summary, prepend it as a system message
+        const summaryMessage: Message = {
+          role: 'assistant',
+          content: `[Previous conversation summary]: ${cachedContext.summary}`
+        }
+        
+        // Return summary + recent messages (sliding window)
+        const windowedMessages = recentMessages.slice(-CONTEXT_WINDOW_SIZE)
+        return [summaryMessage, ...windowedMessages]
       }
       
-      return [summaryMessage, ...recentMessages.slice(-CONTEXT_WINDOW_SIZE)]
+      // Check if we need to create a summary
+      if (recentMessages.length > SUMMARY_THRESHOLD) {
+        const summary = await this.summarizeConversation(
+          recentMessages.slice(0, -CONTEXT_WINDOW_SIZE)
+        )
+        
+        // Cache the summary (will fail gracefully if Redis unavailable)
+        await this.cacheContext(sessionId, {
+          messages: recentMessages.slice(-CONTEXT_WINDOW_SIZE),
+          summary,
+          messageCount: recentMessages.length
+        })
+        
+        // Return summary + recent messages
+        const summaryMessage: Message = {
+          role: 'assistant',
+          content: `[Previous conversation summary]: ${summary}`
+        }
+        
+        return [summaryMessage, ...recentMessages.slice(-CONTEXT_WINDOW_SIZE)]
+      }
+      
+      // No optimization needed for short conversations
+      return recentMessages
+    } catch (error) {
+      console.error('Context optimization error, using fallback:', error)
+      return recentMessages.slice(-CONTEXT_WINDOW_SIZE)
     }
-    
-    // No optimization needed for short conversations
-    return recentMessages
   }
 
   /**

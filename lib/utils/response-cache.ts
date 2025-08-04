@@ -61,9 +61,9 @@ export class ResponseCache {
     
     const cacheKey = this.generateCacheKey(query, queryType)
     
-    // Try Vercel KV first (edge-optimized)
+    // Try Vercel KV first (edge-optimized) - only if available
     try {
-      if (typeof kv !== 'undefined') {
+      if (typeof kv !== 'undefined' && kv && process.env.KV_REST_API_URL) {
         const cached = await kv.get<CachedResponse>(cacheKey)
         if (cached && this.isValidCache(cached, queryType)) {
           console.log(`📦 Cache hit (Vercel KV): ${queryType}`)
@@ -71,11 +71,11 @@ export class ResponseCache {
         }
       }
     } catch (error) {
-      console.error('Vercel KV error:', error)
+      console.error('Vercel KV error (cache disabled):', error)
     }
     
-    // Fallback to Upstash Redis
-    if (redis) {
+    // Fallback to Upstash Redis - only if configured
+    if (redis && process.env.UPSTASH_REDIS_REST_URL) {
       try {
         const cached = await redis.get<CachedResponse>(cacheKey)
         if (cached && this.isValidCache(cached, queryType)) {
@@ -83,10 +83,11 @@ export class ResponseCache {
           return cached.content
         }
       } catch (error) {
-        console.error('Redis cache error:', error)
+        console.error('Redis cache error (cache disabled):', error)
       }
     }
     
+    // No cache available, return null
     return null
   }
 
@@ -110,19 +111,39 @@ export class ResponseCache {
     
     const ttl = CACHE_TTL[queryType as keyof typeof CACHE_TTL]
     
-    // Cache in both stores for redundancy
+    // Cache in available stores only
+    let cacheAttempts = 0
+    let cacheSuccesses = 0
+    
     try {
-      // Vercel KV (edge-optimized)
-      if (typeof kv !== 'undefined') {
-        await kv.setex(cacheKey, ttl, cacheData)
+      // Vercel KV (edge-optimized) - only if available
+      if (typeof kv !== 'undefined' && kv && process.env.KV_REST_API_URL) {
+        cacheAttempts++
+        try {
+          await kv.setex(cacheKey, ttl, cacheData)
+          cacheSuccesses++
+        } catch (kvError) {
+          console.error('KV cache error:', kvError)
+        }
       }
       
-      // Upstash Redis
-      if (redis) {
-        await redis.setex(cacheKey, ttl, cacheData)
+      // Upstash Redis - only if configured
+      if (redis && process.env.UPSTASH_REDIS_REST_URL) {
+        cacheAttempts++
+        try {
+          await redis.setex(cacheKey, ttl, cacheData)
+          cacheSuccesses++
+        } catch (redisError) {
+          console.error('Redis cache error:', redisError)
+        }
       }
       
-      console.log(`💾 Cached response: ${queryType} (TTL: ${ttl}s)`)
+      if (cacheSuccesses > 0) {
+        console.log(`💾 Cached response: ${queryType} (TTL: ${ttl}s, ${cacheSuccesses}/${cacheAttempts} stores)`)
+      } else if (cacheAttempts === 0) {
+        console.log(`⚠️ No cache stores configured - response not cached`)
+      }
+      
     } catch (error) {
       console.error('Error caching response:', error)
     }
