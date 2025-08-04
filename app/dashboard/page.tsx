@@ -98,17 +98,6 @@ function ActivityLoading() {
   )
 }
 
-// Server component for dashboard stats
-async function DashboardStats() {
-  const stats = await fetchDashboardData()
-  return <DashboardStatsGrid stats={stats} />
-}
-
-// Server component for recent activity
-async function RecentActivity() {
-  const stats = await fetchDashboardData()
-  return <RecentActivityCard activities={stats.recentActivity} />
-}
 
 // Server component for sidebar stats
 async function SidebarStats() {
@@ -120,6 +109,7 @@ async function SidebarStats() {
       <WeeklyStatsCard stats={stats} />
     </div>
   )
+
 }
 
 export default async function DashboardPage() {
@@ -136,7 +126,6 @@ export default async function DashboardPage() {
 
       {/* Dashboard Stats */}
       <Suspense fallback={<StatsLoading />}>
-        <DashboardStats />
         <DashboardStatsGrid stats={stats} />
       </Suspense>
 
@@ -164,7 +153,6 @@ export default async function DashboardPage() {
           <div>
             <h2 className="text-xl font-semibold mb-4">Recent Activity</h2>
             <Suspense fallback={<ActivityLoading />}>
-              <RecentActivity />
               <RecentActivityCard activities={stats.recentActivity} />
             </Suspense>
           </div>
@@ -172,28 +160,26 @@ export default async function DashboardPage() {
 
         {/* Sidebar */}
         <div className="lg:col-span-1">
-          <Suspense fallback={
           <Suspense
             fallback={
-            <div className="space-y-6">
-              <div className="card-mystical p-6 animate-pulse">
-                <div className="w-32 h-6 bg-purple-600/30 rounded mb-4" />
-                <div className="w-20 h-20 bg-purple-600/20 rounded-full mx-auto mb-4" />
-                <div className="w-24 h-4 bg-purple-600/30 rounded mx-auto" />
-              </div>
-              <div className="card-mystical p-6 animate-pulse">
-                <div className="w-36 h-6 bg-purple-600/30 rounded mb-4" />
-                <div className="space-y-3">
-                  {[1, 2, 3].map((i) => (
-                    <div key={i} className="flex justify-between">
-                      <div className="w-20 h-4 bg-purple-600/20 rounded" />
-                      <div className="w-8 h-4 bg-purple-600/30 rounded" />
-                    </div>
-                  ))}
+              <div className="space-y-6">
+                <div className="card-mystical p-6 animate-pulse">
+                  <div className="w-32 h-6 bg-purple-600/30 rounded mb-4" />
+                  <div className="w-20 h-20 bg-purple-600/20 rounded-full mx-auto mb-4" />
+                  <div className="w-24 h-4 bg-purple-600/30 rounded mx-auto" />
+                </div>
+                <div className="card-mystical p-6 animate-pulse">
+                  <div className="w-36 h-6 bg-purple-600/30 rounded mb-4" />
+                  <div className="space-y-3">
+                    {[1, 2, 3].map((i) => (
+                      <div key={i} className="flex justify-between">
+                        <div className="w-20 h-4 bg-purple-600/20 rounded" />
+                        <div className="w-8 h-4 bg-purple-600/30 rounded" />
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
-            </div>
-          }>
             }
           >
             <SidebarStats />
