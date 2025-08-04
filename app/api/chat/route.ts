@@ -84,7 +84,10 @@ export async function POST(request: Request) {
     const { data: { user }, error: authError } = await supabase.auth.getUser()
     
     if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      console.error('Authentication error in chat API:', authError)
+      return NextResponse.json({ 
+        error: 'Your session has expired. Please refresh the page and sign in again.' 
+      }, { status: 401 })
     }
 
     // Create or get chat session
@@ -113,32 +116,47 @@ export async function POST(request: Request) {
 
     if (saveUserError) throw saveUserError
 
-    // Check cache settings from Edge Config
-    const cacheSettings = await edgeConfig.getCacheSettings()
+    // Check cache settings from Edge Config with error handling
+    let cacheSettings
+    try {
+      cacheSettings = await edgeConfig.getCacheSettings()
+    } catch (error) {
+      console.error('Edge Config error, using defaults:', error)
+      cacheSettings = {
+        enableResponseCache: true,
+        enableContextCache: true,
+        cacheWarmupEnabled: true,
+        maxCacheAge: 86400,
+      }
+    }
     
     // Try to get cached response for common queries
     let cachedResponse: string | null = null
     if (cacheSettings.enableResponseCache) {
-      cachedResponse = await responseCache.getCachedResponse(userMessage.content)
-      
-      if (cachedResponse) {
-        console.log('📦 Using cached response for common query')
+      try {
+        cachedResponse = await responseCache.getCachedResponse(userMessage.content)
         
-        // Save cached response to database
-        await supabase
-          .from('chat_messages')
-          .insert({
-            session_id: currentSessionId,
-            user_id: user.id,
-            role: 'assistant',
-            content: cachedResponse,
+        if (cachedResponse) {
+          console.log('📦 Using cached response for common query')
+          
+          // Save cached response to database
+          await supabase
+            .from('chat_messages')
+            .insert({
+              session_id: currentSessionId,
+              user_id: user.id,
+              role: 'assistant',
+              content: cachedResponse,
+            })
+          
+          return NextResponse.json({
+            message: cachedResponse,
+            sessionId: currentSessionId,
+            cached: true,
           })
-        
-        return NextResponse.json({
-          message: cachedResponse,
-          sessionId: currentSessionId,
-          cached: true,
-        })
+        }
+      } catch (error) {
+        console.error('Response cache error, continuing without cache:', error)
       }
     }
 
@@ -156,9 +174,15 @@ export async function POST(request: Request) {
     }))
 
     // Use context manager for optimized context when available
-    const aiMessages = cacheSettings.enableContextCache && contextManager
-      ? await contextManager.getOptimizedContext(currentSessionId, rawMessages)
-      : rawMessages.slice(-20)
+    let aiMessages
+    try {
+      aiMessages = cacheSettings.enableContextCache && contextManager
+        ? await contextManager.getOptimizedContext(currentSessionId, rawMessages)
+        : rawMessages.slice(-20)
+    } catch (error) {
+      console.error('Context manager error, using fallback:', error)
+      aiMessages = rawMessages.slice(-20)
+    }
 
     if (USE_MOCK_MODE) {
       // Use mock response in development
