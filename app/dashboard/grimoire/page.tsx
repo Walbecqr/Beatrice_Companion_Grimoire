@@ -2,8 +2,9 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { Plus, Search, BookOpen, Sparkles, Scroll, Heart, Shield, Star, Brain, Filter, Gem } from 'lucide-react'
+import { Plus, Search, BookOpen, Sparkles, Scroll, Heart, Shield, Star, Brain, Filter, Gem, Grid, List } from 'lucide-react'
 import Link from 'next/link'
+import GrimoireTable from '@/components/grimoire-table'
 
 // ✅ FIXED: Updated interface to match actual database schema
 interface GrimoireEntry {
@@ -67,6 +68,7 @@ export default function GrimoirePage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedCategory, setSelectedCategory] = useState<string>('')
   const [selectedSubcategory, setSelectedSubcategory] = useState<string>('')
+  const [viewMode, setViewMode] = useState<'grid' | 'table'>('table')
   const [loading, setLoading] = useState(true)
   const [showFilters, setShowFilters] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -102,6 +104,44 @@ export default function GrimoirePage() {
   useEffect(() => {
     fetchEntries()
   }, [fetchEntries])
+
+  const toggleFavorite = async (id: string, currentState: boolean) => {
+    try {
+      const { error } = await supabase
+        .from('grimoire_entries')
+        .update({ is_favorite: !currentState })
+        .eq('id', id)
+
+      if (error) throw error
+
+      setEntries(prev => 
+        prev.map(entry => 
+          entry.id === id ? { ...entry, is_favorite: !currentState } : entry
+        )
+      )
+    } catch (error) {
+      console.error('Error toggling favorite:', error)
+    }
+  }
+
+  const toggleTested = async (id: string, currentState: boolean) => {
+    try {
+      const { error } = await supabase
+        .from('grimoire_entries')
+        .update({ is_tested: !currentState })
+        .eq('id', id)
+
+      if (error) throw error
+
+      setEntries(prev => 
+        prev.map(entry => 
+          entry.id === id ? { ...entry, is_tested: !currentState } : entry
+        )
+      )
+    } catch (error) {
+      console.error('Error toggling tested:', error)
+    }
+  }
 
   const filteredEntries = Array.isArray(entries) 
     ? entries.filter(entry => {
@@ -196,19 +236,112 @@ export default function GrimoirePage() {
         </div>
       </div>
 
-      {/* Search and Filters */}
-      <div className="space-y-3">
-        <div className="flex gap-3">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-            <input
-              type="text"
-              placeholder="Search grimoire entries..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="input-mystical w-full pl-10"
-            />
-          </div>
+      {/* Search and View Mode */}
+      <div className="flex gap-3">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+          <input
+            type="text"
+            placeholder="Search grimoire entries..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="input-mystical w-full pl-10"
+          />
+        </div>
+        <div className="flex bg-gray-800 rounded-lg p-1">
+          <button
+            onClick={() => setViewMode('table')}
+            className={`p-2 rounded ${viewMode === 'table' ? 'bg-purple-600 text-white' : 'text-gray-400 hover:text-gray-200'}`}
+            title="Table view"
+          >
+            <List className="w-4 h-4" />
+          </button>
+          <button
+            onClick={() => setViewMode('grid')}
+            className={`p-2 rounded ${viewMode === 'grid' ? 'bg-purple-600 text-white' : 'text-gray-400 hover:text-gray-200'}`}
+            title="Grid view"
+          >
+            <Grid className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+
+      {/* Table View */}
+      {viewMode === 'table' && (
+        <GrimoireTable
+          entries={filteredEntries}
+          onToggleFavorite={toggleFavorite}
+          onToggleTested={toggleTested}
+        />
+      )}
+
+      {/* Grid View */}
+      {viewMode === 'grid' && (
+        <>
+          {/* Simple Filters for Grid View */}
+          {showFilters && (
+            <div className="card-mystical space-y-4">
+              <div>
+                <label className="text-sm font-medium text-gray-400 mb-2 block">Type</label>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    onClick={() => setSelectedCategory('')}
+                    className={`px-3 py-1 rounded-full text-sm transition-all ${
+                      !selectedCategory
+                        ? 'bg-purple-600 text-white'
+                        : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+                    }`}
+                  >
+                    All
+                  </button>
+                  {Object.entries(CATEGORY_CONFIG).map(([key, config]) => (
+                    <button
+                      key={key}
+                      onClick={() => setSelectedCategory(key)}
+                      className={`px-3 py-1 rounded-full text-sm transition-all flex items-center gap-1 ${
+                        selectedCategory === key
+                          ? 'bg-purple-600 text-white'
+                          : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+                      }`}
+                    >
+                      <config.icon className="w-3 h-3" />
+                      {key.charAt(0).toUpperCase() + key.slice(1)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="text-sm font-medium text-gray-400 mb-2 block">Category</label>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    onClick={() => setSelectedSubcategory('')}
+                    className={`px-3 py-1 rounded-full text-sm transition-all ${
+                      !selectedSubcategory
+                        ? 'bg-purple-600 text-white'
+                        : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+                    }`}
+                  >
+                    All
+                  </button>
+                  {SUBCATEGORIES.map((subcat) => (
+                    <button
+                      key={subcat}
+                      onClick={() => setSelectedSubcategory(subcat.toLowerCase())}
+                      className={`px-3 py-1 rounded-full text-sm transition-all ${
+                        selectedSubcategory === subcat.toLowerCase()
+                          ? 'bg-purple-600 text-white'
+                          : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+                      }`}
+                    >
+                      {subcat}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
           <button
             onClick={() => setShowFilters(!showFilters)}
             className={`px-4 py-2 rounded-lg flex items-center gap-2 transition-colors ${
@@ -218,154 +351,90 @@ export default function GrimoirePage() {
             }`}
           >
             <Filter className="w-5 h-5" />
-            Filters
+            {showFilters ? 'Hide' : 'Show'} Filters
           </button>
-        </div>
 
-        {/* Filter Panel */}
-        {showFilters && (
-          <div className="card-mystical space-y-4">
-            <div>
-              <label className="text-sm font-medium text-gray-400 mb-2 block">Type</label>
-              <div className="flex flex-wrap gap-2">
-                <button
-                  onClick={() => setSelectedCategory('')}
-                  className={`px-3 py-1 rounded-full text-sm transition-all ${
-                    !selectedCategory
-                      ? 'bg-purple-600 text-white'
-                      : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
-                  }`}
-                >
-                  All
-                </button>
-                {Object.entries(CATEGORY_CONFIG).map(([key, config]) => (
-                  <button
-                    key={key}
-                    onClick={() => setSelectedCategory(key)}
-                    className={`px-3 py-1 rounded-full text-sm transition-all flex items-center gap-1 ${
-                      selectedCategory === key
-                        ? 'bg-purple-600 text-white'
-                        : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
-                    }`}
-                  >
-                    <config.icon className="w-3 h-3" />
-                    {key.charAt(0).toUpperCase() + key.slice(1)}
-                  </button>
-                ))}
-              </div>
+          {/* Entries by Type */}
+          {Object.keys(groupedEntries).length === 0 ? (
+            <div className="card-mystical text-center py-12">
+              <BookOpen className="w-12 h-12 text-purple-400 mx-auto mb-4" />
+              <p className="text-gray-400 mb-4">
+                {searchTerm || selectedCategory || selectedSubcategory
+                  ? 'No entries found matching your filters.' 
+                  : 'Your grimoire is empty. Start building your magical library!'}
+              </p>
+              {!searchTerm && !selectedCategory && !selectedSubcategory && (
+                <Link href="/dashboard/grimoire/new" className="text-purple-400 hover:text-purple-300">
+                  Add your first entry →
+                </Link>
+              )}
             </div>
-
-            <div>
-              <label className="text-sm font-medium text-gray-400 mb-2 block">Category</label>
-              <div className="flex flex-wrap gap-2">
-                <button
-                  onClick={() => setSelectedSubcategory('')}
-                  className={`px-3 py-1 rounded-full text-sm transition-all ${
-                    !selectedSubcategory
-                      ? 'bg-purple-600 text-white'
-                      : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
-                  }`}
-                >
-                  All
-                </button>
-                {SUBCATEGORIES.map((subcat) => (
-                  <button
-                    key={subcat}
-                    onClick={() => setSelectedSubcategory(subcat.toLowerCase())}
-                    className={`px-3 py-1 rounded-full text-sm transition-all ${
-                      selectedSubcategory === subcat.toLowerCase()
-                        ? 'bg-purple-600 text-white'
-                        : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
-                    }`}
-                  >
-                    {subcat}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Entries by Type */}
-      {Object.keys(groupedEntries).length === 0 ? (
-        <div className="card-mystical text-center py-12">
-          <BookOpen className="w-12 h-12 text-purple-400 mx-auto mb-4" />
-          <p className="text-gray-400 mb-4">
-            {searchTerm || selectedCategory || selectedSubcategory
-              ? 'No entries found matching your filters.' 
-              : 'Your grimoire is empty. Start building your magical library!'}
-          </p>
-          {!searchTerm && !selectedCategory && !selectedSubcategory && (
-            <Link href="/dashboard/grimoire/new" className="text-purple-400 hover:text-purple-300">
-              Add your first entry →
-            </Link>
-          )}
-        </div>
-      ) : (
-        <div className="space-y-8">
-          {Object.entries(groupedEntries).map(([type, typeEntries]) => {
-            // ✅ FIXED: Safe config access with fallback
-            const config = CATEGORY_CONFIG[type as keyof typeof CATEGORY_CONFIG] || FALLBACK_CONFIG
-            const Icon = config.icon
-            
-            return (
-              <div key={type}>
-                <div className="flex items-center space-x-2 mb-4">
-                  <Icon className={`w-5 h-5 ${config.color}`} />
-                  <h2 className="text-lg font-semibold capitalize">
-                    {type}s ({typeEntries.length})
-                  </h2>
-                </div>
+          ) : (
+            <div className="space-y-8">
+              {Object.entries(groupedEntries).map(([type, typeEntries]) => {
+                // ✅ FIXED: Safe config access with fallback
+                const config = CATEGORY_CONFIG[type as keyof typeof CATEGORY_CONFIG] || FALLBACK_CONFIG
+                const Icon = config.icon
                 
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                  {typeEntries.map((entry) => (
-                    <Link
-                      key={entry.id}
-                      href={`/dashboard/grimoire/${entry.id}`}
-                      className={`card-mystical hover:scale-[1.02] transition-transform ${config.bg}`}
-                    >
-                      <div className="flex items-start justify-between mb-2">
-                        <h3 className="font-semibold text-lg line-clamp-1">
-                          {entry.title}
-                        </h3>
-                        <Icon className={`w-5 h-5 ${config.color} flex-shrink-0 ml-2`} />
-                      </div>
-                      
-                      {entry.category && (
-                        <p className="text-sm text-gray-400 mb-2 capitalize">
-                          {entry.category}
-                        </p>
-                      )}
-                      
-                      {(entry.purpose || entry.description) && (
-                        <p className="text-sm text-gray-300 line-clamp-2 mb-3">
-                          {entry.purpose || entry.description}
-                        </p>
-                      )}
-                      
-                      <div className="flex items-center justify-between text-xs text-gray-500">
-                        <div className="flex items-center space-x-3">
-                          {entry.best_timing && (
-                            <span>{entry.best_timing}</span>
+                return (
+                  <div key={type}>
+                    <div className="flex items-center space-x-2 mb-4">
+                      <Icon className={`w-5 h-5 ${config.color}`} />
+                      <h2 className="text-lg font-semibold capitalize">
+                        {type}s ({typeEntries.length})
+                      </h2>
+                    </div>
+                    
+                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                      {typeEntries.map((entry) => (
+                        <Link
+                          key={entry.id}
+                          href={`/dashboard/grimoire/${entry.id}`}
+                          className={`card-mystical hover:scale-[1.02] transition-transform ${config.bg}`}
+                        >
+                          <div className="flex items-start justify-between mb-2">
+                            <h3 className="font-semibold text-lg line-clamp-1">
+                              {entry.title}
+                            </h3>
+                            <Icon className={`w-5 h-5 ${config.color} flex-shrink-0 ml-2`} />
+                          </div>
+                          
+                          {entry.category && (
+                            <p className="text-sm text-gray-400 mb-2 capitalize">
+                              {entry.category}
+                            </p>
                           )}
-                          {entry.ingredients && entry.ingredients.length > 0 && (
-                            <span>{entry.ingredients.length} ingredients</span>
+                          
+                          {(entry.purpose || entry.description) && (
+                            <p className="text-sm text-gray-300 line-clamp-2 mb-3">
+                              {entry.purpose || entry.description}
+                            </p>
                           )}
-                        </div>
-                        {entry.is_tested && (
-                          <span className="text-green-400">
-                            Tested ✓
-                          </span>
-                        )}
-                      </div>
-                    </Link>
-                  ))}
-                </div>
-              </div>
-            )
-          })}
-        </div>
+                          
+                          <div className="flex items-center justify-between text-xs text-gray-500">
+                            <div className="flex items-center space-x-3">
+                              {entry.best_timing && (
+                                <span>{entry.best_timing}</span>
+                              )}
+                              {entry.ingredients && entry.ingredients.length > 0 && (
+                                <span>{entry.ingredients.length} ingredients</span>
+                              )}
+                            </div>
+                            {entry.is_tested && (
+                              <span className="text-green-400">
+                                Tested ✓
+                              </span>
+                            )}
+                          </div>
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </>
       )}
     </div>
   )
